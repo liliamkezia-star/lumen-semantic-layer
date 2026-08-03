@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# Jupyter / Notebooks
+.ipynb_checkpoints/
+
+# dbt
+target/
+dbt_packages/
+logs/
+
+# Credenciais e configs locais — NUNCA versionar
+.env
+*.env
+secrets/
+*.pem
+*.key
+
+# Power BI
+*.pbix.bak
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
