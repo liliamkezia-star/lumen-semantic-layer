@@ -29,6 +29,8 @@ em DuckDB — em vez de chamadas paginadas via OData.
   leitura de CSV) do que paginação OData.
 - Atenção: arquivos grandes (~168MB compactado por ano) exigem cuidado com
   uso de memória — não carregar tudo de uma vez ingenuamente.
-- Atenção: cobertura de anos precisa ser decidida (o histórico completo
-  remonta a 2012); processar todos os anos pode gerar volume muito grande
-  para a fase atual do projeto (execução local).
+- Decisão de escopo: será processado o histórico completo disponível
+  (2012 até o presente), conforme especificação original do cronograma.
+  Dado o volume (~14 arquivos de ~150-200MB cada), o processamento será
+  feito ano a ano, nunca carregando múltiplos anos simultaneamente em
+  memória, para viabilizar a execução em ambiente local.
