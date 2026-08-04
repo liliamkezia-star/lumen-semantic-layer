@@ -29,8 +29,11 @@ em DuckDB — em vez de chamadas paginadas via OData.
   leitura de CSV) do que paginação OData.
 - Atenção: arquivos grandes (~168MB compactado por ano) exigem cuidado com
   uso de memória — não carregar tudo de uma vez ingenuamente.
-- Decisão de escopo: será processado o histórico completo disponível
-  (2012 até o presente), conforme especificação original do cronograma.
-  Dado o volume (~14 arquivos de ~150-200MB cada), o processamento será
-  feito ano a ano, nunca carregando múltiplos anos simultaneamente em
-  memória, para viabilizar a execução em ambiente local.
+- Decisão de escopo: será processado o período de 2015 até o presente
+  (não o histórico completo desde 2012), para manter consistência com o
+  período já coletado das séries SGS na Sprint 2 (que começam em 2015,
+  com séries diárias ajustadas a partir de 2016 por limite da própria
+  API). Cruzar fontes com períodos diferentes geraria lacunas ao comparar
+  indicadores no dashboard final.
+- O processamento será feito ano a ano (não todos simultaneamente em
+  memória), dado o volume de cada arquivo (~150-200MB compactado).
