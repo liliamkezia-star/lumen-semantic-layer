@@ -30,3 +30,6 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Banco de dados local (dados, não código)
+*.duckdb
