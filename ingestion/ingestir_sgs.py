@@ -1,7 +1,8 @@
 import time
-import requests
-import duckdb
 from datetime import datetime, timezone
+
+import duckdb
+import requests
 
 SERIES_SGS = {
     "selic_diaria": 11,
