@@ -25,3 +25,24 @@ garante idempotência, adequado para o volume atual (~7.200 linhas).
 **Observações de qualidade conhecidas (a tratar na Silver):**
 - `valor` da Selic diária vem como taxa diária (ex: 0.052531), não anualizada
 - Todos os campos vêm como texto, mesmo quando são números ou datas
+
+### bronze.scr_data_raw
+Dados brutos de operações de crédito por UF, modalidade, segmento e
+cliente, do Sistema de Informações de Créditos (SCR.data) do Banco Central.
+
+**Fonte:** ver `ingestion/contracts/olinda.md`
+**Padrão de carga:** append-only, idempotência por ano (ADR-003)
+**Volume:** ~34,4 milhões de linhas (2015-2025)
+
+### bronze.ibge_localidades_raw
+Cadastro de estados brasileiros (id, sigla, nome, região).
+
+**Fonte:** API de Localidades do IBGE
+**Volume:** 27 linhas
+
+### bronze.ibge_populacao_raw
+População estimada por UF e ano.
+
+**Fonte:** API de Agregados do IBGE (SIDRA, tabela 6579)
+**Observação de qualidade:** anos de 2022 e 2023 ausentes (pausa da fonte
+durante o Censo 2022 — ver `ingestion/contracts/olinda.md`)
