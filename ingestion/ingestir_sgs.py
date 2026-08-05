@@ -73,6 +73,10 @@ def buscar_serie(nome, codigo):
 
 
 def montar_linhas(nome, codigo, dados, url):
+    """Transforma a resposta da API em linhas prontas para inserir no banco,
+    já incluindo os metadados de coleta. O timestamp_coleta é o que permite,
+    na camada Silver, identificar a versão mais recente de cada dado sem
+    que a Bronze precise apagar coletas anteriores."""
     timestamp_coleta = datetime.now(timezone.utc).isoformat()
     linhas = []
     for registro in dados:
@@ -109,9 +113,10 @@ if __name__ == "__main__":
         );
     """)
 
-    conexao.execute("DELETE FROM bronze.sgs_series_raw;")
-    print("Dados antigos removidos, inserindo versão atualizada...")
-
+    # Bronze é append-only: nunca apagamos dados existentes (ver ADR-003).
+    # Execuções repetidas somam novas "safras" de coleta, identificadas
+    # por timestamp_coleta. A camada Silver é responsável por selecionar
+    # apenas a versão mais recente de cada dado.
     conexao.executemany(
         """
         INSERT INTO bronze.sgs_series_raw
