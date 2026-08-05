@@ -65,7 +65,7 @@ def validar_schema_resposta(dados, nome_serie):
     processo se a fonte mudou o formato, em vez de inserir dado
     incompleto ou errado silenciosamente."""
     if not isinstance(dados, list):
-        raise ValueError(
+        raise TypeError(
             f"{nome_serie}: esperava uma lista, recebeu {type(dados)}"
         )
 
