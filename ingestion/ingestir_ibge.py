@@ -1,9 +1,12 @@
+import time
 from datetime import datetime, timezone
 
 import duckdb
 import requests
 
 CAMINHO_BANCO = "lumen.duckdb"
+TIMEOUT_SEGUNDOS = 30
+MAX_TENTATIVAS = 4
 
 URL_LOCALIDADES = "https://servicodados.ibge.gov.br/api/v1/localidades/estados"
 URL_POPULACAO = (
@@ -12,18 +15,74 @@ URL_POPULACAO = (
 )
 
 
+def buscar_com_retry(url, nome_fonte):
+    """Chama a URL com timeout e tenta novamente em caso de falha de
+    rede, com espera crescente entre tentativas (backoff exponencial)."""
+    for tentativa in range(1, MAX_TENTATIVAS + 1):
+        try:
+            resposta = requests.get(url, timeout=TIMEOUT_SEGUNDOS)
+            resposta.raise_for_status()
+            return resposta
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError,
+                requests.exceptions.HTTPError) as erro:
+            espera = 2 ** (tentativa - 1)
+            print(f"  {nome_fonte}: tentativa {tentativa} falhou ({erro}), esperando {espera}s...")
+            time.sleep(espera)
+
+    raise RuntimeError(f"{nome_fonte}: falhou após {MAX_TENTATIVAS} tentativas")
+
+
+def validar_schema_localidades(dados):
+    """Verifica se a resposta mantém a estrutura esperada: lista de
+    estados, cada um com id, sigla, nome e um objeto regiao com id e nome."""
+    if not isinstance(dados, list):
+        raise TypeError(f"Localidades: esperava uma lista, recebeu {type(dados)}")
+
+    if len(dados) == 0:
+        raise ValueError("Localidades: resposta vazia")
+
+    primeiro = dados[0]
+    chaves_esperadas = {"id", "sigla", "nome", "regiao"}
+    chaves_recebidas = set(primeiro.keys())
+
+    if chaves_esperadas - chaves_recebidas:
+        raise ValueError(
+            f"Localidades: schema mudou! Faltando chaves: {chaves_esperadas - chaves_recebidas}"
+        )
+
+    if "id" not in primeiro["regiao"] or "nome" not in primeiro["regiao"]:
+        raise ValueError("Localidades: schema de 'regiao' mudou")
+
+
+def validar_schema_populacao(dados):
+    """Verifica a estrutura aninhada da resposta de Agregados/SIDRA:
+    lista de itens, cada um com 'resultados', cada resultado com 'series',
+    cada série com 'localidade' e um dicionário 'serie' (ano -> valor)."""
+    if not isinstance(dados, list) or len(dados) == 0:
+        raise ValueError("População: resposta vazia ou formato inesperado")
+
+    try:
+        primeiro_resultado = dados[0]["resultados"][0]
+        primeira_serie = primeiro_resultado["series"][0]
+        _ = primeira_serie["localidade"]["id"]
+        _ = primeira_serie["localidade"]["nome"]
+        _ = primeira_serie["serie"]
+    except (KeyError, IndexError) as erro:
+        raise ValueError(f"População: schema mudou! Estrutura inesperada: {erro}") from erro
+
+
 def buscar_localidades():
-    resposta = requests.get(URL_LOCALIDADES)
-    resposta.raise_for_status()
+    resposta = buscar_com_retry(URL_LOCALIDADES, "Localidades")
     dados = resposta.json()
+    validar_schema_localidades(dados)
     print(f"Localidades: {len(dados)} estados encontrados")
     return dados, URL_LOCALIDADES
 
 
 def buscar_populacao():
-    resposta = requests.get(URL_POPULACAO)
-    resposta.raise_for_status()
+    resposta = buscar_com_retry(URL_POPULACAO, "População")
     dados = resposta.json()
+    validar_schema_populacao(dados)
     print("População: dados recebidos")
     return dados, URL_POPULACAO
 

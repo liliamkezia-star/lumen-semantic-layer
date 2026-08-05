@@ -46,3 +46,12 @@ População estimada por UF e ano.
 **Fonte:** API de Agregados do IBGE (SIDRA, tabela 6579)
 **Observação de qualidade:** anos de 2022 e 2023 ausentes (pausa da fonte
 durante o Censo 2022 — ver `ingestion/contracts/olinda.md`)
+
+### Observação de qualidade — bronze.scr_data_raw / numero_de_operacoes
+27,76% das linhas têm numero_de_operacoes = -1. A metodologia oficial do
+SCR.data (versão 2) não documenta explicitamente esse valor. Hipótese não
+confirmada: pode se tratar de supressão por sigilo estatístico (a
+metodologia menciona agrupamento quando o número de operações é muito
+baixo, para evitar identificação individual). Tratamento adotado na
+Silver: convertido para NULL, preservando o valor original -1 disponível
+na Bronze para investigação futura, caso necessário.

@@ -10,6 +10,41 @@ ANO_FINAL = 2025  # 2026 tratado separadamente por ser ano corrente/incompleto
 CAMINHO_BANCO = "lumen.duckdb"
 PASTA_TEMP = Path("ingestion/temp_scr")
 
+TIMEOUT_CONEXAO = 10  # segundos para estabelecer a conexão
+TIMEOUT_LEITURA = 60  # segundos entre pedaços recebidos (arquivo grande)
+MAX_TENTATIVAS_DOWNLOAD = 3
+
+COLUNAS_ESPERADAS = {
+    "data_base", "uf", "segmento", "cliente", "cnae_ocupacao", "porte",
+    "modalidade", "submodalidade", "origem", "indexador",
+    "numero_de_operacoes", "a_vencer_ate_90_dias", "a_vencer_de_91_ate_360_dias",
+    "a_vencer_de_361_ate_1080_dias", "a_vencer_de_1081_ate_1800_dias",
+    "a_vencer_de_1801_ate_5400_dias", "a_vencer_acima_de_5400_dias",
+    "carteira_a_vencer", "vencido_de_15_ate_90_dias", "vencido_acima_de_90_dias",
+    "carteira_vencida", "carteira_ativa", "carteira_inadimplencia",
+    "ativo_problematico",
+}
+
+
+def validar_schema_csv(conexao, caminho_csv, nome_arquivo):
+    """Lê apenas o cabeçalho do CSV (sem carregar os dados) e confere se
+    as colunas esperadas estão presentes, antes de processar o arquivo
+    inteiro. Evita gastar tempo/memória processando um arquivo com
+    estrutura já sabidamente incompatível."""
+    colunas_reais = conexao.sql(f"""
+        SELECT * FROM read_csv(
+            '{caminho_csv.as_posix()}', delim=';', decimal_separator=','
+        )
+        LIMIT 0
+    """).columns
+    colunas_reais = set(colunas_reais)
+
+    faltando = COLUNAS_ESPERADAS - colunas_reais
+    if faltando:
+        raise ValueError(
+            f"{nome_arquivo}: schema mudou! Colunas faltando: {faltando}"
+        )
+
 
 def ano_ja_carregado(conexao, ano):
     existe_tabela = conexao.execute("""
@@ -27,18 +62,39 @@ def ano_ja_carregado(conexao, ano):
 
 
 def baixar_zip_do_ano(ano):
+    """Baixa o ZIP do ano com timeout e retry. Se a conexão cair no meio
+    do download, o arquivo parcial é descartado antes de tentar de novo,
+    evitando processar um ZIP corrompido/incompleto."""
     url = f"https://www.bcb.gov.br/pda/desig/scrdata_{ano}.zip"
     destino = PASTA_TEMP / f"scrdata_{ano}.zip"
     PASTA_TEMP.mkdir(parents=True, exist_ok=True)
 
-    print(f"  Baixando {url} ...")
-    resposta = requests.get(url, stream=True)
-    resposta.raise_for_status()
+    for tentativa in range(1, MAX_TENTATIVAS_DOWNLOAD + 1):
+        try:
+            print(f"  Baixando {url} (tentativa {tentativa})...")
+            resposta = requests.get(
+                url, stream=True, timeout=(TIMEOUT_CONEXAO, TIMEOUT_LEITURA)
+            )
+            resposta.raise_for_status()
 
-    with open(destino, "wb") as arquivo:
-        arquivo.writelines(resposta.iter_content(chunk_size=8192))
+            with open(destino, "wb") as arquivo:
+                arquivo.writelines(resposta.iter_content(chunk_size=8192))
 
-    return destino, url
+            return destino, url
+
+        except (requests.exceptions.Timeout,
+                requests.exceptions.ConnectionError,
+                requests.exceptions.HTTPError) as erro:
+            print(f"  Falha no download (tentativa {tentativa}): {erro}")
+            if destino.exists():
+                destino.unlink()  # descarta arquivo parcial/corrompido
+
+            if tentativa == MAX_TENTATIVAS_DOWNLOAD:
+                raise RuntimeError(
+                    f"Download do ano {ano} falhou após {MAX_TENTATIVAS_DOWNLOAD} tentativas"
+                ) from erro
+
+    raise RuntimeError(f"Download do ano {ano} falhou de forma inesperada")
 
 
 def processar_ano(conexao, ano):
@@ -55,6 +111,7 @@ def processar_ano(conexao, ano):
         for nome_arquivo in nomes_arquivos:
             z.extract(nome_arquivo, PASTA_TEMP)
             caminho_csv = PASTA_TEMP / nome_arquivo
+            validar_schema_csv(conexao, caminho_csv, nome_arquivo)
             timestamp_coleta = datetime.now(timezone.utc).isoformat()
 
             existe_tabela = conexao.execute("""

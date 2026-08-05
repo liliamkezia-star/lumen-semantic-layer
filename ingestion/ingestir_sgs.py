@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import duckdb
 import requests
@@ -18,10 +18,15 @@ SERIES_SGS = {
 }
 
 DATA_INICIAL_COMPLETA = "01/01/2015"
-DATA_INICIAL_JANELA_10_ANOS = "05/08/2016"
-DATA_FINAL = "04/08/2026"
+HOJE = datetime.now(timezone.utc).date()
+# Calculado dinamicamente para nunca ficar desatualizado: a API do SGS
+# aceita no máximo 10 anos de janela para séries diárias.
+DATA_INICIAL_JANELA_10_ANOS = (HOJE - timedelta(days=365 * 10 - 1)).strftime("%d/%m/%Y")
+DATA_FINAL = HOJE.strftime("%d/%m/%Y")
+
 CAMINHO_BANCO = "lumen.duckdb"
 MAX_TENTATIVAS = 4
+TIMEOUT_SEGUNDOS = 30
 
 
 def chamar_api(codigo, data_inicial):
@@ -31,15 +36,23 @@ def chamar_api(codigo, data_inicial):
         "dataInicial": data_inicial,
         "dataFinal": DATA_FINAL,
     }
-    resposta = requests.get(url, params=parametros)
+    resposta = requests.get(url, params=parametros, timeout=TIMEOUT_SEGUNDOS)
     return resposta, url
 
 
 def chamar_api_com_retry(codigo, data_inicial):
     """Tenta chamar a API várias vezes, esperando mais tempo a cada falha
-    (backoff exponencial: 1s, 2s, 4s, 8s...)."""
+    (backoff exponencial: 1s, 2s, 4s, 8s...). Trata tanto respostas com
+    problema (status errado, JSON inválido) quanto falhas de rede
+    (timeout, conexão recusada), que antes derrubavam o script inteiro."""
     for tentativa in range(1, MAX_TENTATIVAS + 1):
-        resposta, url = chamar_api(codigo, data_inicial)
+        try:
+            resposta, url = chamar_api(codigo, data_inicial)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as erro:
+            espera = 2 ** (tentativa - 1)
+            print(f"  tentativa {tentativa} falhou (falha de rede: {erro}), esperando {espera}s...")
+            time.sleep(espera)
+            continue
 
         if resposta.status_code == 200:
             try:
@@ -52,11 +65,35 @@ def chamar_api_com_retry(codigo, data_inicial):
             return resposta, url
 
         espera = 2 ** (tentativa - 1)
-        print(f"  tentativa {tentativa} falhou (status {resposta.status_code}), "
-              f"esperando {espera}s...")
+        motivo = "JSON inválido" if resposta.status_code == 200 else f"status {resposta.status_code}"
+        print(f"  tentativa {tentativa} falhou ({motivo}), esperando {espera}s...")
         time.sleep(espera)
 
     raise RuntimeError(f"Falhou após {MAX_TENTATIVAS} tentativas para código {codigo}")
+
+
+def validar_schema_resposta(dados, nome_serie):
+    """Verifica se a resposta da API mantém a estrutura esperada
+    (lista de objetos com as chaves 'data' e 'valor'). Interrompe o
+    processo se a fonte mudou o formato, em vez de inserir dado
+    incompleto ou errado silenciosamente."""
+    if not isinstance(dados, list):
+        raise TypeError(
+            f"{nome_serie}: esperava uma lista, recebeu {type(dados)}"
+        )
+
+    if len(dados) == 0:
+        raise ValueError(f"{nome_serie}: resposta vazia, sem registros")
+
+    primeiro_registro = dados[0]
+    chaves_esperadas = {"data", "valor"}
+    chaves_recebidas = set(primeiro_registro.keys())
+
+    if chaves_recebidas != chaves_esperadas:
+        raise ValueError(
+            f"{nome_serie}: schema mudou! Esperado {chaves_esperadas}, "
+            f"recebido {chaves_recebidas}"
+        )
 
 
 def buscar_serie(nome, codigo):
@@ -68,6 +105,7 @@ def buscar_serie(nome, codigo):
 
     resposta.raise_for_status()
     dados = resposta.json()
+    validar_schema_resposta(dados, nome)
     print(f"{nome} (código {codigo}): {len(dados)} registros")
     return dados, url
 
@@ -114,9 +152,6 @@ if __name__ == "__main__":
     """)
 
     # Bronze é append-only: nunca apagamos dados existentes (ver ADR-003).
-    # Execuções repetidas somam novas "safras" de coleta, identificadas
-    # por timestamp_coleta. A camada Silver é responsável por selecionar
-    # apenas a versão mais recente de cada dado.
     conexao.executemany(
         """
         INSERT INTO bronze.sgs_series_raw
