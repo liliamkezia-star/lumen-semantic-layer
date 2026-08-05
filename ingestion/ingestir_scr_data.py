@@ -10,6 +10,37 @@ ANO_FINAL = 2025  # 2026 tratado separadamente por ser ano corrente/incompleto
 CAMINHO_BANCO = "lumen.duckdb"
 PASTA_TEMP = Path("ingestion/temp_scr")
 
+COLUNAS_ESPERADAS = {
+    "data_base", "uf", "segmento", "cliente", "cnae_ocupacao", "porte",
+    "modalidade", "submodalidade", "origem", "indexador",
+    "numero_de_operacoes", "a_vencer_ate_90_dias", "a_vencer_de_91_ate_360_dias",
+    "a_vencer_de_361_ate_1080_dias", "a_vencer_de_1081_ate_1800_dias",
+    "a_vencer_de_1801_ate_5400_dias", "a_vencer_acima_de_5400_dias",
+    "carteira_a_vencer", "vencido_de_15_ate_90_dias", "vencido_acima_de_90_dias",
+    "carteira_vencida", "carteira_ativa", "carteira_inadimplencia",
+    "ativo_problematico",
+}
+
+
+def validar_schema_csv(conexao, caminho_csv, nome_arquivo):
+    """Lê apenas o cabeçalho do CSV (sem carregar os dados) e confere se
+    as colunas esperadas estão presentes, antes de processar o arquivo
+    inteiro. Evita gastar tempo/memória processando um arquivo com
+    estrutura já sabidamente incompatível."""
+    colunas_reais = conexao.sql(f"""
+        SELECT * FROM read_csv(
+            '{caminho_csv.as_posix()}', delim=';', decimal_separator=','
+        )
+        LIMIT 0
+    """).columns
+    colunas_reais = set(colunas_reais)
+
+    faltando = COLUNAS_ESPERADAS - colunas_reais
+    if faltando:
+        raise ValueError(
+            f"{nome_arquivo}: schema mudou! Colunas faltando: {faltando}"
+        )
+
 
 def ano_ja_carregado(conexao, ano):
     existe_tabela = conexao.execute("""
@@ -55,6 +86,7 @@ def processar_ano(conexao, ano):
         for nome_arquivo in nomes_arquivos:
             z.extract(nome_arquivo, PASTA_TEMP)
             caminho_csv = PASTA_TEMP / nome_arquivo
+            validar_schema_csv(conexao, caminho_csv, nome_arquivo)
             timestamp_coleta = datetime.now(timezone.utc).isoformat()
 
             existe_tabela = conexao.execute("""

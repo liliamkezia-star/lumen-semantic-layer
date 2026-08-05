@@ -12,10 +12,50 @@ URL_POPULACAO = (
 )
 
 
+def validar_schema_localidades(dados):
+    """Verifica se a resposta mantém a estrutura esperada: lista de
+    estados, cada um com id, sigla, nome e um objeto regiao com id e nome."""
+    if not isinstance(dados, list):
+        raise TypeError(f"Localidades: esperava uma lista, recebeu {type(dados)}")
+
+    if len(dados) == 0:
+        raise ValueError("Localidades: resposta vazia")
+
+    primeiro = dados[0]
+    chaves_esperadas = {"id", "sigla", "nome", "regiao"}
+    chaves_recebidas = set(primeiro.keys())
+
+    if chaves_esperadas - chaves_recebidas:
+        raise ValueError(
+            f"Localidades: schema mudou! Faltando chaves: {chaves_esperadas - chaves_recebidas}"
+        )
+
+    if "id" not in primeiro["regiao"] or "nome" not in primeiro["regiao"]:
+        raise ValueError("Localidades: schema de 'regiao' mudou")
+
+
+def validar_schema_populacao(dados):
+    """Verifica a estrutura aninhada da resposta de Agregados/SIDRA:
+    lista de itens, cada um com 'resultados', cada resultado com 'series',
+    cada série com 'localidade' e um dicionário 'serie' (ano -> valor)."""
+    if not isinstance(dados, list) or len(dados) == 0:
+        raise ValueError("População: resposta vazia ou formato inesperado")
+
+    try:
+        primeiro_resultado = dados[0]["resultados"][0]
+        primeira_serie = primeiro_resultado["series"][0]
+        _ = primeira_serie["localidade"]["id"]
+        _ = primeira_serie["localidade"]["nome"]
+        _ = primeira_serie["serie"]
+    except (KeyError, IndexError) as erro:
+        raise ValueError(f"População: schema mudou! Estrutura inesperada: {erro}") from erro
+
+
 def buscar_localidades():
     resposta = requests.get(URL_LOCALIDADES)
     resposta.raise_for_status()
     dados = resposta.json()
+    validar_schema_localidades(dados)
     print(f"Localidades: {len(dados)} estados encontrados")
     return dados, URL_LOCALIDADES
 
@@ -24,6 +64,7 @@ def buscar_populacao():
     resposta = requests.get(URL_POPULACAO)
     resposta.raise_for_status()
     dados = resposta.json()
+    validar_schema_populacao(dados)
     print("População: dados recebidos")
     return dados, URL_POPULACAO
 
