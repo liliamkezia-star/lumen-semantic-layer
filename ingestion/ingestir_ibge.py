@@ -1,15 +1,35 @@
+import time
 from datetime import datetime, timezone
 
 import duckdb
 import requests
 
 CAMINHO_BANCO = "lumen.duckdb"
+TIMEOUT_SEGUNDOS = 30
+MAX_TENTATIVAS = 4
 
 URL_LOCALIDADES = "https://servicodados.ibge.gov.br/api/v1/localidades/estados"
 URL_POPULACAO = (
     "https://servicodados.ibge.gov.br/api/v3/agregados/6579/periodos/-11/"
     "variaveis/9324?localidades=N3[all]"
 )
+
+
+def buscar_com_retry(url, nome_fonte):
+    """Chama a URL com timeout e tenta novamente em caso de falha de
+    rede, com espera crescente entre tentativas (backoff exponencial)."""
+    for tentativa in range(1, MAX_TENTATIVAS + 1):
+        try:
+            resposta = requests.get(url, timeout=TIMEOUT_SEGUNDOS)
+            resposta.raise_for_status()
+            return resposta
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError,
+                requests.exceptions.HTTPError) as erro:
+            espera = 2 ** (tentativa - 1)
+            print(f"  {nome_fonte}: tentativa {tentativa} falhou ({erro}), esperando {espera}s...")
+            time.sleep(espera)
+
+    raise RuntimeError(f"{nome_fonte}: falhou após {MAX_TENTATIVAS} tentativas")
 
 
 def validar_schema_localidades(dados):
@@ -52,8 +72,7 @@ def validar_schema_populacao(dados):
 
 
 def buscar_localidades():
-    resposta = requests.get(URL_LOCALIDADES)
-    resposta.raise_for_status()
+    resposta = buscar_com_retry(URL_LOCALIDADES, "Localidades")
     dados = resposta.json()
     validar_schema_localidades(dados)
     print(f"Localidades: {len(dados)} estados encontrados")
@@ -61,8 +80,7 @@ def buscar_localidades():
 
 
 def buscar_populacao():
-    resposta = requests.get(URL_POPULACAO)
-    resposta.raise_for_status()
+    resposta = buscar_com_retry(URL_POPULACAO, "População")
     dados = resposta.json()
     validar_schema_populacao(dados)
     print("População: dados recebidos")
