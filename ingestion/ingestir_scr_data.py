@@ -36,8 +36,7 @@ def baixar_zip_do_ano(ano):
     resposta.raise_for_status()
 
     with open(destino, "wb") as arquivo:
-        for pedaco in resposta.iter_content(chunk_size=8192):
-            arquivo.write(pedaco)
+        arquivo.writelines(resposta.iter_content(chunk_size=8192))
 
     return destino, url
 
