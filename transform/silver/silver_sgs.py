@@ -28,6 +28,21 @@ if __name__ == "__main__":
             codigo_serie,
             data_referencia,
             valor,
+            -- Documenta explicitamente a unidade de cada série, evitando
+            -- ambiguidade silenciosa (ex: taxa diária vs. taxa anual).
+            CASE nome_serie
+                WHEN 'selic_diaria' THEN '% ao dia'
+                WHEN 'selic_meta' THEN '% ao ano'
+                WHEN 'ipca_mensal' THEN '% no mês'
+                WHEN 'saldo_credito_total' THEN 'R$ milhões'
+                WHEN 'credito_pib' THEN '% do PIB'
+                WHEN 'inadimplencia_total' THEN '% da carteira'
+                WHEN 'spread_medio_total' THEN 'pontos percentuais'
+                WHEN 'concessoes_pf_total' THEN 'R$ milhões'
+                WHEN 'concessoes_pj_total' THEN 'R$ milhões'
+                WHEN 'endividamento_familias' THEN '% da renda acumulada 12m'
+                ELSE 'não documentado'
+            END AS unidade_valor,
             timestamp_coleta AS timestamp_coleta_original
         FROM dados_mais_recentes
         WHERE numero_linha = 1
@@ -39,7 +54,7 @@ if __name__ == "__main__":
     print(f"Total de linhas em silver.serie_credito_mensal: {total}")
 
     amostra = conexao.execute("""
-        SELECT nome_serie, data_referencia, valor
+        SELECT nome_serie, data_referencia, valor, unidade_valor
         FROM silver.serie_credito_mensal
         WHERE nome_serie = 'selic_meta'
         ORDER BY data_referencia
