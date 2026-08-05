@@ -52,11 +52,35 @@ def chamar_api_com_retry(codigo, data_inicial):
             return resposta, url
 
         espera = 2 ** (tentativa - 1)
-        print(f"  tentativa {tentativa} falhou (status {resposta.status_code}), "
-              f"esperando {espera}s...")
+        motivo = "JSON inválido" if resposta.status_code == 200 else f"status {resposta.status_code}"
+        print(f"  tentativa {tentativa} falhou ({motivo}), esperando {espera}s...")
         time.sleep(espera)
 
     raise RuntimeError(f"Falhou após {MAX_TENTATIVAS} tentativas para código {codigo}")
+
+
+def validar_schema_resposta(dados, nome_serie):
+    """Verifica se a resposta da API mantém a estrutura esperada
+    (lista de objetos com as chaves 'data' e 'valor'). Interrompe o
+    processo se a fonte mudou o formato, em vez de inserir dado
+    incompleto ou errado silenciosamente."""
+    if not isinstance(dados, list):
+        raise ValueError(
+            f"{nome_serie}: esperava uma lista, recebeu {type(dados)}"
+        )
+
+    if len(dados) == 0:
+        raise ValueError(f"{nome_serie}: resposta vazia, sem registros")
+
+    primeiro_registro = dados[0]
+    chaves_esperadas = {"data", "valor"}
+    chaves_recebidas = set(primeiro_registro.keys())
+
+    if chaves_recebidas != chaves_esperadas:
+        raise ValueError(
+            f"{nome_serie}: schema mudou! Esperado {chaves_esperadas}, "
+            f"recebido {chaves_recebidas}"
+        )
 
 
 def buscar_serie(nome, codigo):
@@ -68,6 +92,7 @@ def buscar_serie(nome, codigo):
 
     resposta.raise_for_status()
     dados = resposta.json()
+    validar_schema_resposta(dados, nome)
     print(f"{nome} (código {codigo}): {len(dados)} registros")
     return dados, url
 
@@ -114,9 +139,6 @@ if __name__ == "__main__":
     """)
 
     # Bronze é append-only: nunca apagamos dados existentes (ver ADR-003).
-    # Execuções repetidas somam novas "safras" de coleta, identificadas
-    # por timestamp_coleta. A camada Silver é responsável por selecionar
-    # apenas a versão mais recente de cada dado.
     conexao.executemany(
         """
         INSERT INTO bronze.sgs_series_raw
