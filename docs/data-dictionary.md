@@ -42,6 +42,14 @@ Cadastro de estados brasileiros (id, sigla, nome, região).
 **Fonte:** API de Localidades do IBGE
 **Volume:** 27 linhas
 
+## Validações de integridade entre fontes
+
+### UF: SCR.data vs. IBGE
+Verificado que as 27 UFs em `silver.credito_uf_modalidade.uf` (sigla,
+ex: "PB") são idênticas às 27 UFs em `silver.localidade.sigla_uf` — sem
+divergência de formato, maiúscula/minúscula ou UFs presentes em uma fonte
+e ausente na outra. Nenhuma padronização adicional é necessária para
+cruzar essas duas fontes por UF.
 ### bronze.ibge_populacao_raw
 População estimada por UF e ano.
 
