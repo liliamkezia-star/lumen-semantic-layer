@@ -45,16 +45,20 @@ def criar_cte_deduplicada():
     """
 
 
-if __name__ == "__main__":
-    conexao = duckdb.connect(CAMINHO_BANCO)
+def construir_silver_sgs(conexao):
+    """Cria as tabelas silver.indicador_macro e silver.serie_credito_mensal
+    a partir de bronze.sgs_series_raw, na conexão DuckDB fornecida.
+
+    Extraído como função reutilizável para que os testes de qualidade
+    (tests/test_silver_sgs.py) possam construir essas tabelas sobre um
+    banco de dados sintético em memória, sem depender do arquivo real
+    lumen.duckdb nem de chamadas à API externa."""
     conexao.execute("CREATE SCHEMA IF NOT EXISTS silver;")
 
     cte = criar_cte_deduplicada()
     case_unidade = montar_case_unidade()
     lista_macro = ", ".join(f"'{s}'" for s in SERIES_INDICADOR_MACRO)
 
-    # Tabela 1: indicador_macro (Selic, IPCA — indicadores macroeconômicos
-    # nacionais, sem relação direta com o volume de crédito)
     conexao.execute(f"""
         CREATE OR REPLACE TABLE silver.indicador_macro AS
         WITH dados_mais_recentes AS ({cte})
@@ -70,8 +74,6 @@ if __name__ == "__main__":
           AND nome_serie IN ({lista_macro})
     """)
 
-    # Tabela 2: serie_credito_mensal (indicadores derivados diretamente
-    # do mercado de crédito nacional: saldo, concessões, inadimplência etc.)
     conexao.execute(f"""
         CREATE OR REPLACE TABLE silver.serie_credito_mensal AS
         WITH dados_mais_recentes AS ({cte})
@@ -86,6 +88,11 @@ if __name__ == "__main__":
         WHERE numero_linha = 1
           AND nome_serie NOT IN ({lista_macro})
     """)
+
+
+if __name__ == "__main__":
+    conexao = duckdb.connect(CAMINHO_BANCO)
+    construir_silver_sgs(conexao)
 
     total_macro = conexao.execute(
         "SELECT COUNT(*) FROM silver.indicador_macro"
