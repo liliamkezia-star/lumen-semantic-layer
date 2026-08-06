@@ -17,12 +17,36 @@ UNIDADES = {
     "endividamento_familias": "% da renda acumulada 12m",
 }
 
+GRANULARIDADE = {
+    "selic_diaria": "diária",
+    "selic_meta": "diária",  # publica valor repetido todo dia útil até mudar
+    "ipca_mensal": "mensal",
+    "saldo_credito_total": "mensal",
+    "credito_pib": "mensal",
+    "inadimplencia_total": "mensal",
+    "spread_medio_total": "mensal",
+    "concessoes_pf_total": "mensal",
+    "concessoes_pj_total": "mensal",
+    "endividamento_familias": "mensal",
+}
+
 
 def montar_case_unidade():
     """Monta a expressão CASE WHEN para a coluna de unidade a partir do
     dicionário UNIDADES, evitando repetir a lista em duas queries."""
     linhas_case = [
         f"WHEN '{serie}' THEN '{unidade}'" for serie, unidade in UNIDADES.items()
+    ]
+    return "CASE nome_serie\n" + "\n".join(linhas_case) + "\nELSE 'não documentado'\nEND"
+
+
+def montar_case_granularidade():
+    """Monta a expressão CASE WHEN para a coluna de granularidade, a
+    partir do dicionário GRANULARIDADE. Documenta explicitamente que
+    indicador_macro mistura séries diárias e mensais — evita que alguém
+    consumindo a tabela assuma erroneamente um grão temporal único."""
+    linhas_case = [
+        f"WHEN '{serie}' THEN '{gran}'" for serie, gran in GRANULARIDADE.items()
     ]
     return "CASE nome_serie\n" + "\n".join(linhas_case) + "\nELSE 'não documentado'\nEND"
 
@@ -57,6 +81,7 @@ def construir_silver_sgs(conexao):
 
     cte = criar_cte_deduplicada()
     case_unidade = montar_case_unidade()
+    case_granularidade = montar_case_granularidade()
     lista_macro = ", ".join(f"'{s}'" for s in SERIES_INDICADOR_MACRO)
 
     conexao.execute(f"""
@@ -68,6 +93,7 @@ def construir_silver_sgs(conexao):
             data_referencia,
             valor,
             {case_unidade} AS unidade_valor,
+            {case_granularidade} AS granularidade,
             timestamp_coleta AS timestamp_ultima_coleta
         FROM dados_mais_recentes
         WHERE numero_linha = 1
@@ -83,6 +109,7 @@ def construir_silver_sgs(conexao):
             data_referencia,
             valor,
             {case_unidade} AS unidade_valor,
+            {case_granularidade} AS granularidade,
             timestamp_coleta AS timestamp_ultima_coleta
         FROM dados_mais_recentes
         WHERE numero_linha = 1
@@ -105,13 +132,13 @@ if __name__ == "__main__":
     print(f"Total em silver.serie_credito_mensal: {total_credito}")
 
     series_macro = conexao.execute(
-        "SELECT DISTINCT nome_serie FROM silver.indicador_macro"
+        "SELECT DISTINCT nome_serie, granularidade FROM silver.indicador_macro"
     ).fetchall()
     series_credito = conexao.execute(
-        "SELECT DISTINCT nome_serie FROM silver.serie_credito_mensal"
+        "SELECT DISTINCT nome_serie, granularidade FROM silver.serie_credito_mensal"
     ).fetchall()
 
-    print("\nSéries em indicador_macro:", [s[0] for s in series_macro])
-    print("Séries em serie_credito_mensal:", [s[0] for s in series_credito])
+    print("\nSéries em indicador_macro:", series_macro)
+    print("Séries em serie_credito_mensal:", series_credito)
 
     conexao.close()

@@ -67,7 +67,13 @@ deduplicados a partir da Bronze.
 **Origem:** bronze.sgs_series_raw (filtrado por série macro)
 **Deduplicação:** mantém apenas a coleta mais recente por (nome_serie, data)
 **Colunas:** nome_serie, codigo_serie, data_referencia (DATE), valor
-(DOUBLE), unidade_valor, timestamp_ultima_coleta
+(DOUBLE), unidade_valor, granularidade, timestamp_ultima_coleta
+
+**Observação de granularidade:** esta tabela mistura séries com
+periodicidades diferentes — selic_diaria e selic_meta são diárias,
+ipca_mensal é mensal. A coluna `granularidade` torna isso explícito;
+consultas que agregam por período devem considerar essa diferença
+(ex: não somar valores diários e mensais sem ajuste).
 
 ### silver.serie_credito_mensal
 Indicadores nacionais derivados do mercado de crédito (saldo, concessões,
@@ -75,9 +81,11 @@ inadimplência, spread, endividamento), limpos e tipados.
 
 **Origem:** bronze.sgs_series_raw (filtrado por série de crédito)
 **Deduplicação:** mesma lógica de indicador_macro
-**Colunas:** iguais a silver.indicador_macro
+**Colunas:** nome_serie, codigo_serie, data_referencia (DATE), valor
+(DOUBLE), unidade_valor, granularidade, timestamp_ultima_coleta
 
 **Observação:** as duas tabelas acima compartilham a mesma fonte Bronze e
 lógica de deduplicação, mas são separadas por categoria conceitual
 (indicador macro vs. indicador de crédito), conforme definido no
-cronograma original do projeto.
+cronograma original do projeto. Nesta tabela, todas as séries têm
+granularidade mensal (sem mistura, diferente de indicador_macro).
