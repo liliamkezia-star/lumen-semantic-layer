@@ -2,66 +2,116 @@ import duckdb
 
 CAMINHO_BANCO = "lumen.duckdb"
 
-if __name__ == "__main__":
-    conexao = duckdb.connect(CAMINHO_BANCO)
+SERIES_INDICADOR_MACRO = {"selic_diaria", "selic_meta", "ipca_mensal"}
+
+UNIDADES = {
+    "selic_diaria": "% ao dia",
+    "selic_meta": "% ao ano",
+    "ipca_mensal": "% no mês",
+    "saldo_credito_total": "R$ milhões",
+    "credito_pib": "% do PIB",
+    "inadimplencia_total": "% da carteira",
+    "spread_medio_total": "pontos percentuais",
+    "concessoes_pf_total": "R$ milhões",
+    "concessoes_pj_total": "R$ milhões",
+    "endividamento_familias": "% da renda acumulada 12m",
+}
+
+
+def montar_case_unidade():
+    """Monta a expressão CASE WHEN para a coluna de unidade a partir do
+    dicionário UNIDADES, evitando repetir a lista em duas queries."""
+    linhas_case = [
+        f"WHEN '{serie}' THEN '{unidade}'" for serie, unidade in UNIDADES.items()
+    ]
+    return "CASE nome_serie\n" + "\n".join(linhas_case) + "\nELSE 'não documentado'\nEND"
+
+
+def criar_cte_deduplicada():
+    """CTE compartilhada: converte tipos e mantém apenas a coleta mais
+    recente de cada (nome_serie, data_referencia), via ROW_NUMBER."""
+    return """
+        SELECT
+            nome_serie,
+            codigo_serie,
+            STRPTIME(data_referencia, '%d/%m/%Y')::DATE AS data_referencia,
+            CAST(valor AS DOUBLE) AS valor,
+            timestamp_coleta,
+            ROW_NUMBER() OVER (
+                PARTITION BY nome_serie, data_referencia
+                ORDER BY timestamp_coleta DESC
+            ) AS numero_linha
+        FROM bronze.sgs_series_raw
+    """
+
+
+def construir_silver_sgs(conexao):
+    """Cria as tabelas silver.indicador_macro e silver.serie_credito_mensal
+    a partir de bronze.sgs_series_raw, na conexão DuckDB fornecida.
+
+    Extraído como função reutilizável para que os testes de qualidade
+    (tests/test_silver_sgs.py) possam construir essas tabelas sobre um
+    banco de dados sintético em memória, sem depender do arquivo real
+    lumen.duckdb nem de chamadas à API externa."""
     conexao.execute("CREATE SCHEMA IF NOT EXISTS silver;")
 
-    conexao.execute("""
-        CREATE OR REPLACE TABLE silver.serie_credito_mensal AS
-        WITH dados_mais_recentes AS (
-            SELECT
-                nome_serie,
-                codigo_serie,
-                -- Converte texto dd/mm/aaaa para tipo DATE de verdade
-                STRPTIME(data_referencia, '%d/%m/%Y')::DATE AS data_referencia,
-                -- Converte texto com vírgula/ponto decimal para número
-                CAST(valor AS DOUBLE) AS valor,
-                timestamp_coleta,
-                ROW_NUMBER() OVER (
-                    PARTITION BY nome_serie, data_referencia
-                    ORDER BY timestamp_coleta DESC
-                ) AS numero_linha
-            FROM bronze.sgs_series_raw
-        )
+    cte = criar_cte_deduplicada()
+    case_unidade = montar_case_unidade()
+    lista_macro = ", ".join(f"'{s}'" for s in SERIES_INDICADOR_MACRO)
+
+    conexao.execute(f"""
+        CREATE OR REPLACE TABLE silver.indicador_macro AS
+        WITH dados_mais_recentes AS ({cte})
         SELECT
             nome_serie,
             codigo_serie,
             data_referencia,
             valor,
-            -- Documenta explicitamente a unidade de cada série, evitando
-            -- ambiguidade silenciosa (ex: taxa diária vs. taxa anual).
-            CASE nome_serie
-                WHEN 'selic_diaria' THEN '% ao dia'
-                WHEN 'selic_meta' THEN '% ao ano'
-                WHEN 'ipca_mensal' THEN '% no mês'
-                WHEN 'saldo_credito_total' THEN 'R$ milhões'
-                WHEN 'credito_pib' THEN '% do PIB'
-                WHEN 'inadimplencia_total' THEN '% da carteira'
-                WHEN 'spread_medio_total' THEN 'pontos percentuais'
-                WHEN 'concessoes_pf_total' THEN 'R$ milhões'
-                WHEN 'concessoes_pj_total' THEN 'R$ milhões'
-                WHEN 'endividamento_familias' THEN '% da renda acumulada 12m'
-                ELSE 'não documentado'
-            END AS unidade_valor,
-            timestamp_coleta AS timestamp_coleta_original
+            {case_unidade} AS unidade_valor,
+            timestamp_coleta AS timestamp_ultima_coleta
         FROM dados_mais_recentes
         WHERE numero_linha = 1
+          AND nome_serie IN ({lista_macro})
     """)
 
-    total = conexao.execute(
+    conexao.execute(f"""
+        CREATE OR REPLACE TABLE silver.serie_credito_mensal AS
+        WITH dados_mais_recentes AS ({cte})
+        SELECT
+            nome_serie,
+            codigo_serie,
+            data_referencia,
+            valor,
+            {case_unidade} AS unidade_valor,
+            timestamp_coleta AS timestamp_ultima_coleta
+        FROM dados_mais_recentes
+        WHERE numero_linha = 1
+          AND nome_serie NOT IN ({lista_macro})
+    """)
+
+
+if __name__ == "__main__":
+    conexao = duckdb.connect(CAMINHO_BANCO)
+    construir_silver_sgs(conexao)
+
+    total_macro = conexao.execute(
+        "SELECT COUNT(*) FROM silver.indicador_macro"
+    ).fetchone()[0]
+    total_credito = conexao.execute(
         "SELECT COUNT(*) FROM silver.serie_credito_mensal"
     ).fetchone()[0]
-    print(f"Total de linhas em silver.serie_credito_mensal: {total}")
 
-    amostra = conexao.execute("""
-        SELECT nome_serie, data_referencia, valor, unidade_valor
-        FROM silver.serie_credito_mensal
-        WHERE nome_serie = 'selic_meta'
-        ORDER BY data_referencia
-        LIMIT 5
-    """).fetchall()
-    print("\nAmostra (selic_meta):")
-    for linha in amostra:
-        print(linha)
+    print(f"Total em silver.indicador_macro: {total_macro}")
+    print(f"Total em silver.serie_credito_mensal: {total_credito}")
+
+    series_macro = conexao.execute(
+        "SELECT DISTINCT nome_serie FROM silver.indicador_macro"
+    ).fetchall()
+    series_credito = conexao.execute(
+        "SELECT DISTINCT nome_serie FROM silver.serie_credito_mensal"
+    ).fetchall()
+
+    print("\nSéries em indicador_macro:", [s[0] for s in series_macro])
+    print("Séries em serie_credito_mensal:", [s[0] for s in series_credito])
 
     conexao.close()

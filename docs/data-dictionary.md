@@ -55,3 +55,27 @@ metodologia menciona agrupamento quando o número de operações é muito
 baixo, para evitar identificação individual). Tratamento adotado na
 Silver: convertido para NULL, preservando o valor original -1 disponível
 na Bronze para investigação futura, caso necessário.
+
+## Camada Silver
+
+### silver.indicador_macro
+Indicadores macroeconômicos nacionais (Selic, IPCA), limpos, tipados e
+deduplicados a partir da Bronze.
+
+**Origem:** bronze.sgs_series_raw (filtrado por série macro)
+**Deduplicação:** mantém apenas a coleta mais recente por (nome_serie, data)
+**Colunas:** nome_serie, codigo_serie, data_referencia (DATE), valor
+(DOUBLE), unidade_valor, timestamp_ultima_coleta
+
+### silver.serie_credito_mensal
+Indicadores nacionais derivados do mercado de crédito (saldo, concessões,
+inadimplência, spread, endividamento), limpos e tipados.
+
+**Origem:** bronze.sgs_series_raw (filtrado por série de crédito)
+**Deduplicação:** mesma lógica de indicador_macro
+**Colunas:** iguais a silver.indicador_macro
+
+**Observação:** as duas tabelas acima compartilham a mesma fonte Bronze e
+lógica de deduplicação, mas são separadas por categoria conceitual
+(indicador macro vs. indicador de crédito), conforme definido no
+cronograma original do projeto.
