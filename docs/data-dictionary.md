@@ -10,8 +10,10 @@ de cada série.
 **Fonte:** https://api.bcb.gov.br (ver contrato completo em
 `ingestion/contracts/sgs.md`)
 
-**Padrão de carga:** full refresh (apaga tudo e reinsere a cada execução) —
-garante idempotência, adequado para o volume atual (~7.200 linhas).
+**Padrão de carga:** append-only (ver ADR-003) — cada execução soma uma
+nova coleta, identificada por timestamp_coleta, sem apagar dados
+anteriores. A camada Silver seleciona apenas a versão mais recente de
+cada dado via ROW_NUMBER().
 
 | Coluna | Tipo | Descrição |
 |---|---|---|
