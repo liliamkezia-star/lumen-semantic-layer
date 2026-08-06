@@ -92,6 +92,39 @@ inadimplência, spread, endividamento), limpos e tipados.
 **Colunas:** nome_serie, codigo_serie, data_referencia (DATE), valor
 (DOUBLE), unidade_valor, granularidade, timestamp_ultima_coleta
 
+### silver.credito_uf_modalidade
+Operações de crédito por UF, modalidade, segmento e demais dimensões,
+limpas e tipadas, na granularidade original da fonte (ver ADR-004 —
+nenhuma agregação foi aplicada nesta camada).
+
+**Origem:** bronze.scr_data_raw
+**Volume:** ~34,4 milhões de linhas (igual à Bronze — sem agregação)
+**Tratamento aplicado:** numero_de_operacoes = -1 convertido para NULL
+(ver observação de qualidade na seção Bronze)
+**Colunas:** data_base, uf, segmento, cliente, cnae_ocupacao, porte,
+modalidade, submodalidade, origem, indexador, numero_de_operacoes,
+carteira_a_vencer, carteira_vencida, carteira_ativa,
+carteira_inadimplencia, ativo_problematico, ano_arquivo, arquivo_origem,
+timestamp_coleta
+
+### silver.localidade
+Cadastro de UFs, deduplicado por id_uf a partir da Bronze.
+
+**Origem:** bronze.ibge_localidades_raw
+**Volume:** 27 linhas (uma por UF)
+**Colunas:** id_uf, sigla_uf, nome_uf, id_regiao, nome_regiao,
+timestamp_ultima_coleta
+
+### silver.populacao_uf
+População estimada por UF e ano, com tipos convertidos (ano e
+populacao_estimada como INTEGER/BIGINT).
+
+**Origem:** bronze.ibge_populacao_raw
+**Volume:** 297 linhas (27 UFs × 11 anos)
+**Observação de qualidade:** anos de 2022 e 2023 ausentes — herdado da
+Bronze (ver observação correspondente na seção Bronze)
+**Colunas:** id_uf, nome_uf, ano, populacao_estimada, timestamp_ultima_coleta
+
 **Observação:** as duas tabelas acima compartilham a mesma fonte Bronze e
 lógica de deduplicação, mas são separadas por categoria conceitual
 (indicador macro vs. indicador de crédito), conforme definido no
