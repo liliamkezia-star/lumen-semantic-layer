@@ -26,3 +26,6 @@ jobs:
 
       - name: Verificar formatação e erros (ruff)
         run: ruff check .
+
+      - name: Rodar testes de qualidade (pytest)
+        run: pytest tests/ -v
