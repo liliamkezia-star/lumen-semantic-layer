@@ -43,7 +43,10 @@ if __name__ == "__main__":
                 WHEN 'endividamento_familias' THEN '% da renda acumulada 12m'
                 ELSE 'não documentado'
             END AS unidade_valor,
-            timestamp_coleta AS timestamp_coleta_original
+            -- Nome corrigido: este é o timestamp da coleta MAIS RECENTE
+            -- (não da primeira/original), já que filtramos numero_linha = 1
+            -- ordenado por timestamp_coleta DESC.
+            timestamp_coleta AS timestamp_ultima_coleta
         FROM dados_mais_recentes
         WHERE numero_linha = 1
     """)
