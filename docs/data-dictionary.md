@@ -10,8 +10,10 @@ de cada série.
 **Fonte:** https://api.bcb.gov.br (ver contrato completo em
 `ingestion/contracts/sgs.md`)
 
-**Padrão de carga:** full refresh (apaga tudo e reinsere a cada execução) —
-garante idempotência, adequado para o volume atual (~7.200 linhas).
+**Padrão de carga:** append-only (ver ADR-003) — cada execução soma uma
+nova coleta, identificada por timestamp_coleta, sem apagar dados
+anteriores. A camada Silver seleciona apenas a versão mais recente de
+cada dado via ROW_NUMBER().
 
 | Coluna | Tipo | Descrição |
 |---|---|---|
@@ -40,6 +42,14 @@ Cadastro de estados brasileiros (id, sigla, nome, região).
 **Fonte:** API de Localidades do IBGE
 **Volume:** 27 linhas
 
+## Validações de integridade entre fontes
+
+### UF: SCR.data vs. IBGE
+Verificado que as 27 UFs em `silver.credito_uf_modalidade.uf` (sigla,
+ex: "PB") são idênticas às 27 UFs em `silver.localidade.sigla_uf` — sem
+divergência de formato, maiúscula/minúscula ou UFs presentes em uma fonte
+e ausente na outra. Nenhuma padronização adicional é necessária para
+cruzar essas duas fontes por UF.
 ### bronze.ibge_populacao_raw
 População estimada por UF e ano.
 
@@ -65,7 +75,13 @@ deduplicados a partir da Bronze.
 **Origem:** bronze.sgs_series_raw (filtrado por série macro)
 **Deduplicação:** mantém apenas a coleta mais recente por (nome_serie, data)
 **Colunas:** nome_serie, codigo_serie, data_referencia (DATE), valor
-(DOUBLE), unidade_valor, timestamp_ultima_coleta
+(DOUBLE), unidade_valor, granularidade, timestamp_ultima_coleta
+
+**Observação de granularidade:** esta tabela mistura séries com
+periodicidades diferentes — selic_diaria e selic_meta são diárias,
+ipca_mensal é mensal. A coluna `granularidade` torna isso explícito;
+consultas que agregam por período devem considerar essa diferença
+(ex: não somar valores diários e mensais sem ajuste).
 
 ### silver.serie_credito_mensal
 Indicadores nacionais derivados do mercado de crédito (saldo, concessões,
@@ -73,9 +89,108 @@ inadimplência, spread, endividamento), limpos e tipados.
 
 **Origem:** bronze.sgs_series_raw (filtrado por série de crédito)
 **Deduplicação:** mesma lógica de indicador_macro
-**Colunas:** iguais a silver.indicador_macro
+**Colunas:** nome_serie, codigo_serie, data_referencia (DATE), valor
+(DOUBLE), unidade_valor, granularidade, timestamp_ultima_coleta
+
+### silver.credito_uf_modalidade
+Operações de crédito por UF, modalidade, segmento e demais dimensões,
+limpas e tipadas, na granularidade original da fonte (ver ADR-004 —
+nenhuma agregação foi aplicada nesta camada).
+
+**Origem:** bronze.scr_data_raw
+**Volume:** ~34,4 milhões de linhas (igual à Bronze — sem agregação)
+**Tratamento aplicado:** numero_de_operacoes = -1 convertido para NULL
+(ver observação de qualidade na seção Bronze)
+**Colunas:** data_base, uf, segmento, cliente, cnae_ocupacao, porte,
+modalidade, submodalidade, origem, indexador, numero_de_operacoes,
+carteira_a_vencer, carteira_vencida, carteira_ativa,
+carteira_inadimplencia, ativo_problematico, ano_arquivo, arquivo_origem,
+timestamp_coleta
+
+### silver.localidade
+Cadastro de UFs, deduplicado por id_uf a partir da Bronze.
+
+**Origem:** bronze.ibge_localidades_raw
+**Volume:** 27 linhas (uma por UF)
+**Colunas:** id_uf, sigla_uf, nome_uf, id_regiao, nome_regiao,
+timestamp_ultima_coleta
+
+### silver.populacao_uf
+População estimada por UF e ano, com tipos convertidos (ano e
+populacao_estimada como INTEGER/BIGINT).
+
+**Origem:** bronze.ibge_populacao_raw
+**Volume:** 297 linhas (27 UFs × 11 anos)
+**Observação de qualidade:** anos de 2022 e 2023 ausentes — herdado da
+Bronze (ver observação correspondente na seção Bronze)
+**Colunas:** id_uf, nome_uf, ano, populacao_estimada, timestamp_ultima_coleta
 
 **Observação:** as duas tabelas acima compartilham a mesma fonte Bronze e
 lógica de deduplicação, mas são separadas por categoria conceitual
 (indicador macro vs. indicador de crédito), conforme definido no
-cronograma original do projeto.
+cronograma original do projeto. Nesta tabela, todas as séries têm
+granularidade mensal (sem mistura, diferente de indicador_macro).
+
+## Camada Gold (star schema via dbt)
+
+### gold.dim_calendario
+Dimensão de calendário gerada (não vem de nenhuma fonte), de 2015-01-01
+a 2026-12-31, granularidade diária.
+
+**Colunas:** id_data (PK, formato YYYYMMDD), data, ano, mes, trimestre,
+dia, nome_mes, ano_mes, trimestre_label
+
+### gold.dim_uf
+**Origem:** stg_localidade
+**Colunas:** id_uf (PK), sigla_uf, nome_uf, id_regiao, nome_regiao
+
+### gold.dim_modalidade
+Combinações únicas de modalidade/submodalidade/origem/indexador de
+crédito, extraídas de stg_credito_uf_modalidade.
+
+**Colunas:** id_modalidade (PK, chave substituta), modalidade,
+submodalidade, origem, indexador
+**Volume:** 491 combinações
+
+### gold.dim_segmento
+Combinações únicas de segmento/cliente/cnae_ocupacao/porte.
+
+**Colunas:** id_segmento (PK, chave substituta), segmento, cliente,
+cnae_ocupacao, porte
+**Volume:** 1.372 combinações
+
+### gold.fato_credito
+Fato de operações de crédito, na granularidade original da fonte
+(1 linha por data_base × UF × modalidade × segmento, sem agregação —
+ver ADR-004).
+
+**Origem:** stg_credito_uf_modalidade, com joins para as 4 dimensões
+**Volume:** 34.461.901 linhas (integridade referencial validada: zero
+órfãos em todas as chaves)
+
+**Semiaditividade das métricas:**
+- `numero_de_operacoes`: aditiva (pode ser somada livremente em
+  qualquer dimensão, inclusive tempo)
+- `carteira_a_vencer`, `carteira_vencida`, `carteira_ativa`,
+  `carteira_inadimplencia`, `ativo_problematico`: **semiaditivas** —
+  são saldos (estoque) em uma data de referência. Podem ser somadas
+  entre UF/modalidade/segmento na mesma competência, mas **não devem
+  ser somadas ao longo do tempo** (ex: somar carteira_ativa de janeiro
+  e fevereiro não representa nada válido — o correto é usar o saldo do
+  mês mais recente, ou média, dependendo da análise).
+
+### gold.fato_indicador_macro
+Fato de indicadores macroeconômicos e de crédito nacional (SGS),
+unindo indicador_macro e serie_credito_mensal.
+
+**Origem:** stg_indicador_macro, stg_serie_credito_mensal
+**Volume:** 7.264 linhas
+**Observação:** mistura granularidade diária e mensal (ver coluna
+granularidade) — herdada das tabelas Silver de origem.
+
+## Validações de integridade — Gold
+- Zero órfãos confirmados em fato_credito (id_data, id_uf,
+  id_modalidade, id_segmento) e fato_indicador_macro (id_data)
+- 20 testes dbt (unique, not_null, relationships) passando
+- Pendente: reconciliação de fato_credito com totais oficiais
+  divulgados pelo BCB (fica para validação antes da Sprint 6)

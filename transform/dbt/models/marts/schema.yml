@@ -1,0 +1,87 @@
+version: 2
+
+models:
+  - name: dim_calendario
+    description: Dimensão de calendário, gerada dia a dia de 2015 a 2026.
+    columns:
+      - name: id_data
+        description: Chave substituta no formato YYYYMMDD.
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_uf
+    description: Dimensão de UFs brasileiras (27 estados + DF).
+    columns:
+      - name: id_uf
+        description: Chave substituta, código oficial do IBGE.
+        tests:
+          - unique
+          - not_null
+      - name: sigla_uf
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_modalidade
+    description: Combinações únicas de modalidade, submodalidade, origem e indexador de crédito.
+    columns:
+      - name: id_modalidade
+        description: Chave substituta gerada sequencialmente.
+        tests:
+          - unique
+          - not_null
+
+  - name: dim_segmento
+    description: Combinações únicas de segmento, tipo de cliente, CNAE e porte.
+    columns:
+      - name: id_segmento
+        description: Chave substituta gerada sequencialmente.
+        tests:
+          - unique
+          - not_null
+
+  - name: fato_credito
+    description: >
+      Fato de operações de crédito por UF, modalidade e segmento, na
+      granularidade original da fonte SCR.data (ver ADR-004).
+    columns:
+      - name: id_data
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_calendario')
+                field: id_data
+      - name: id_uf
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_uf')
+                field: id_uf
+      - name: id_modalidade
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_modalidade')
+                field: id_modalidade
+      - name: id_segmento
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_segmento')
+                field: id_segmento
+
+  - name: fato_indicador_macro
+    description: Fato de indicadores macroeconômicos e de crédito nacional (SGS).
+    columns:
+      - name: id_data
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_calendario')
+                field: id_data

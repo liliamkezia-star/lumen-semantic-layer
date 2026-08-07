@@ -37,3 +37,9 @@ Thumbs.db
 # Arquivos de dados grandes (SCR.data) - nunca versionar
 ingestion/*.zip
 ingestion/scrdata_*.csv
+
+# dbt - artefatos gerados, não versionar
+transform/dbt/target/
+transform/dbt/logs/
+transform/dbt/dbt_packages/
+transform/logs/

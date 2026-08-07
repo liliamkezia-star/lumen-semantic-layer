@@ -2,11 +2,17 @@ import duckdb
 
 CAMINHO_BANCO = "lumen.duckdb"
 
-if __name__ == "__main__":
-    conexao = duckdb.connect(CAMINHO_BANCO)
-    conexao.execute("CREATE SCHEMA IF NOT EXISTS silver;")
 
-    print("Processando silver.credito_uf_modalidade (pode levar alguns minutos)...")
+def construir_silver_scr_data(conexao):
+    """Cria silver.credito_uf_modalidade a partir de bronze.scr_data_raw.
+
+    Mantém a granularidade total da fonte (ver ADR-004) — nenhuma
+    agregação acontece aqui, apenas tratamento do valor sentinela -1 em
+    numero_de_operacoes (ver observação no dicionário de dados).
+
+    Extraído como função reutilizável para permitir testes de qualidade
+    sobre dados sintéticos em memória (mesmo padrão de silver_sgs.py)."""
+    conexao.execute("CREATE SCHEMA IF NOT EXISTS silver;")
 
     conexao.execute("""
         CREATE OR REPLACE TABLE silver.credito_uf_modalidade AS
@@ -35,6 +41,13 @@ if __name__ == "__main__":
             timestamp_coleta
         FROM bronze.scr_data_raw
     """)
+
+
+if __name__ == "__main__":
+    conexao = duckdb.connect(CAMINHO_BANCO)
+
+    print("Processando silver.credito_uf_modalidade (pode levar alguns minutos)...")
+    construir_silver_scr_data(conexao)
 
     total = conexao.execute(
         "SELECT COUNT(*) FROM silver.credito_uf_modalidade"
