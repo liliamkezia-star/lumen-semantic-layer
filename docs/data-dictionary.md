@@ -130,3 +130,67 @@ lógica de deduplicação, mas são separadas por categoria conceitual
 (indicador macro vs. indicador de crédito), conforme definido no
 cronograma original do projeto. Nesta tabela, todas as séries têm
 granularidade mensal (sem mistura, diferente de indicador_macro).
+
+## Camada Gold (star schema via dbt)
+
+### gold.dim_calendario
+Dimensão de calendário gerada (não vem de nenhuma fonte), de 2015-01-01
+a 2026-12-31, granularidade diária.
+
+**Colunas:** id_data (PK, formato YYYYMMDD), data, ano, mes, trimestre,
+dia, nome_mes, ano_mes, trimestre_label
+
+### gold.dim_uf
+**Origem:** stg_localidade
+**Colunas:** id_uf (PK), sigla_uf, nome_uf, id_regiao, nome_regiao
+
+### gold.dim_modalidade
+Combinações únicas de modalidade/submodalidade/origem/indexador de
+crédito, extraídas de stg_credito_uf_modalidade.
+
+**Colunas:** id_modalidade (PK, chave substituta), modalidade,
+submodalidade, origem, indexador
+**Volume:** 491 combinações
+
+### gold.dim_segmento
+Combinações únicas de segmento/cliente/cnae_ocupacao/porte.
+
+**Colunas:** id_segmento (PK, chave substituta), segmento, cliente,
+cnae_ocupacao, porte
+**Volume:** 1.372 combinações
+
+### gold.fato_credito
+Fato de operações de crédito, na granularidade original da fonte
+(1 linha por data_base × UF × modalidade × segmento, sem agregação —
+ver ADR-004).
+
+**Origem:** stg_credito_uf_modalidade, com joins para as 4 dimensões
+**Volume:** 34.461.901 linhas (integridade referencial validada: zero
+órfãos em todas as chaves)
+
+**Semiaditividade das métricas:**
+- `numero_de_operacoes`: aditiva (pode ser somada livremente em
+  qualquer dimensão, inclusive tempo)
+- `carteira_a_vencer`, `carteira_vencida`, `carteira_ativa`,
+  `carteira_inadimplencia`, `ativo_problematico`: **semiaditivas** —
+  são saldos (estoque) em uma data de referência. Podem ser somadas
+  entre UF/modalidade/segmento na mesma competência, mas **não devem
+  ser somadas ao longo do tempo** (ex: somar carteira_ativa de janeiro
+  e fevereiro não representa nada válido — o correto é usar o saldo do
+  mês mais recente, ou média, dependendo da análise).
+
+### gold.fato_indicador_macro
+Fato de indicadores macroeconômicos e de crédito nacional (SGS),
+unindo indicador_macro e serie_credito_mensal.
+
+**Origem:** stg_indicador_macro, stg_serie_credito_mensal
+**Volume:** 7.264 linhas
+**Observação:** mistura granularidade diária e mensal (ver coluna
+granularidade) — herdada das tabelas Silver de origem.
+
+## Validações de integridade — Gold
+- Zero órfãos confirmados em fato_credito (id_data, id_uf,
+  id_modalidade, id_segmento) e fato_indicador_macro (id_data)
+- 20 testes dbt (unique, not_null, relationships) passando
+- Pendente: reconciliação de fato_credito com totais oficiais
+  divulgados pelo BCB (fica para validação antes da Sprint 6)
