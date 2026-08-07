@@ -1,0 +1,21 @@
+select
+    data_base,
+    uf,
+    segmento,
+    cliente,
+    cnae_ocupacao,
+    porte,
+    modalidade,
+    submodalidade,
+    origem,
+    indexador,
+    numero_de_operacoes,
+    carteira_a_vencer,
+    carteira_vencida,
+    carteira_ativa,
+    carteira_inadimplencia,
+    ativo_problematico,
+    ano_arquivo,
+    arquivo_origem,
+    timestamp_coleta
+from silver.credito_uf_modalidade
