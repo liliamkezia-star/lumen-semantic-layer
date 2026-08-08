@@ -1,8 +1,15 @@
+import sys
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 import duckdb
 import requests
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from common.logging_config import configurar_logger
+
+logger = configurar_logger(__name__)
 
 CAMINHO_BANCO = "lumen.duckdb"
 TIMEOUT_SEGUNDOS = 30
@@ -26,7 +33,9 @@ def buscar_com_retry(url, nome_fonte):
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError,
                 requests.exceptions.HTTPError) as erro:
             espera = 2 ** (tentativa - 1)
-            print(f"  {nome_fonte}: tentativa {tentativa} falhou ({erro}), esperando {espera}s...")
+            logger.warning(
+                f"{nome_fonte}: tentativa {tentativa} falhou ({erro}), esperando {espera}s..."
+            )
             time.sleep(espera)
 
     raise RuntimeError(f"{nome_fonte}: falhou após {MAX_TENTATIVAS} tentativas")
@@ -75,7 +84,7 @@ def buscar_localidades():
     resposta = buscar_com_retry(URL_LOCALIDADES, "Localidades")
     dados = resposta.json()
     validar_schema_localidades(dados)
-    print(f"Localidades: {len(dados)} estados encontrados")
+    logger.info(f"Localidades: {len(dados)} estados encontrados")
     return dados, URL_LOCALIDADES
 
 
@@ -83,7 +92,7 @@ def buscar_populacao():
     resposta = buscar_com_retry(URL_POPULACAO, "População")
     dados = resposta.json()
     validar_schema_populacao(dados)
-    print("População: dados recebidos")
+    logger.info("População: dados recebidos")
     return dados, URL_POPULACAO
 
 
@@ -133,8 +142,8 @@ if __name__ == "__main__":
     dados_populacao, url_pop = buscar_populacao()
     linhas_populacao = montar_linhas_populacao(dados_populacao, url_pop)
 
-    print(f"\nLinhas de localidades: {len(linhas_localidades)}")
-    print(f"Linhas de população: {len(linhas_populacao)}")
+    logger.info(f"Linhas de localidades: {len(linhas_localidades)}")
+    logger.info(f"Linhas de população: {len(linhas_populacao)}")
 
     conexao = duckdb.connect(CAMINHO_BANCO)
     conexao.execute("CREATE SCHEMA IF NOT EXISTS bronze;")
@@ -183,7 +192,7 @@ if __name__ == "__main__":
         "SELECT COUNT(*) FROM bronze.ibge_populacao_raw"
     ).fetchone()[0]
 
-    print(f"\nTotal na tabela localidades: {total_localidades}")
-    print(f"Total na tabela populacao: {total_populacao}")
+    logger.info(f"Total na tabela localidades: {total_localidades}")
+    logger.info(f"Total na tabela populacao: {total_populacao}")
 
     conexao.close()

@@ -1,9 +1,17 @@
+import sys
+from pathlib import Path
+
 import duckdb
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from common.logging_config import configurar_logger
+
+logger = configurar_logger(__name__)
 
 CAMINHO_BANCO = "lumen.duckdb"
 
 
-def construir_silver_ibge(conexao):
+def construir_silver_ibge(conexao) -> None:
     """Cria silver.localidade e silver.populacao_uf a partir da Bronze do
     IBGE, aplicando deduplicação por timestamp_coleta (mesmo padrão do
     SGS) e tipagem correta.
@@ -66,12 +74,12 @@ if __name__ == "__main__":
         "SELECT COUNT(*) FROM silver.populacao_uf"
     ).fetchone()[0]
 
-    print(f"Total em silver.localidade: {total_localidade}")
-    print(f"Total em silver.populacao_uf: {total_populacao}")
+    logger.info(f"Total em silver.localidade: {total_localidade}")
+    logger.info(f"Total em silver.populacao_uf: {total_populacao}")
 
     anos_presentes = conexao.execute(
         "SELECT DISTINCT ano FROM silver.populacao_uf ORDER BY ano"
     ).fetchall()
-    print("Anos presentes em populacao_uf:", [a[0] for a in anos_presentes])
+    logger.info(f"Anos presentes em populacao_uf: {[a[0] for a in anos_presentes]}")
 
     conexao.close()

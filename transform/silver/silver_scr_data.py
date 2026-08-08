@@ -1,9 +1,17 @@
+import sys
+from pathlib import Path
+
 import duckdb
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from common.logging_config import configurar_logger
+
+logger = configurar_logger(__name__)
 
 CAMINHO_BANCO = "lumen.duckdb"
 
 
-def construir_silver_scr_data(conexao):
+def construir_silver_scr_data(conexao) -> None:
     """Cria silver.credito_uf_modalidade a partir de bronze.scr_data_raw.
 
     Mantém a granularidade total da fonte (ver ADR-004) — nenhuma
@@ -87,18 +95,18 @@ def construir_silver_scr_data(conexao):
 if __name__ == "__main__":
     conexao = duckdb.connect(CAMINHO_BANCO)
 
-    print("Processando silver.credito_uf_modalidade (pode levar alguns minutos)...")
+    logger.info("Processando silver.credito_uf_modalidade (pode levar alguns minutos)...")
     construir_silver_scr_data(conexao)
 
     total = conexao.execute(
         "SELECT COUNT(*) FROM silver.credito_uf_modalidade"
     ).fetchone()[0]
-    print(f"Total de linhas em silver.credito_uf_modalidade: {total}")
+    logger.info(f"Total de linhas em silver.credito_uf_modalidade: {total}")
 
     nulos_operacoes = conexao.execute(
         "SELECT COUNT(*) FROM silver.credito_uf_modalidade WHERE numero_de_operacoes IS NULL"
     ).fetchone()[0]
-    print(f"Linhas com numero_de_operacoes NULL (antes era -1): {nulos_operacoes}")
+    logger.info(f"Linhas com numero_de_operacoes NULL (antes era -1): {nulos_operacoes}")
 
     tipo_data = conexao.execute("""
         SELECT data_type FROM information_schema.columns
@@ -106,6 +114,6 @@ if __name__ == "__main__":
           AND table_name = 'credito_uf_modalidade'
           AND column_name = 'data_base'
     """).fetchone()[0]
-    print(f"Tipo de data_base: {tipo_data}")
+    logger.info(f"Tipo de data_base: {tipo_data}")
 
     conexao.close()

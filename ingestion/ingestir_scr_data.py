@@ -1,9 +1,15 @@
+import sys
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 import duckdb
 import requests
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from common.logging_config import configurar_logger
+
+logger = configurar_logger(__name__)
 
 ANO_INICIAL = 2015
 ANO_FINAL = 2025  # 2026 tratado separadamente por ser ano corrente/incompleto
@@ -71,7 +77,7 @@ def baixar_zip_do_ano(ano):
 
     for tentativa in range(1, MAX_TENTATIVAS_DOWNLOAD + 1):
         try:
-            print(f"  Baixando {url} (tentativa {tentativa})...")
+            logger.info(f"Baixando {url} (tentativa {tentativa})...")
             resposta = requests.get(
                 url, stream=True, timeout=(TIMEOUT_CONEXAO, TIMEOUT_LEITURA)
             )
@@ -85,7 +91,7 @@ def baixar_zip_do_ano(ano):
         except (requests.exceptions.Timeout,
                 requests.exceptions.ConnectionError,
                 requests.exceptions.HTTPError) as erro:
-            print(f"  Falha no download (tentativa {tentativa}): {erro}")
+            logger.warning(f"Falha no download (tentativa {tentativa}): {erro}")
             if destino.exists():
                 destino.unlink()  # descarta arquivo parcial/corrompido
 
@@ -99,10 +105,10 @@ def baixar_zip_do_ano(ano):
 
 def processar_ano(conexao, ano):
     if ano_ja_carregado(conexao, ano):
-        print(f"Ano {ano}: já carregado anteriormente, pulando.")
+        logger.info(f"Ano {ano}: já carregado anteriormente, pulando.")
         return
 
-    print(f"Ano {ano}: iniciando...")
+    logger.info(f"Ano {ano}: iniciando...")
     caminho_zip, url_fonte = baixar_zip_do_ano(ano)
 
     with zipfile.ZipFile(caminho_zip) as z:
@@ -145,12 +151,12 @@ def processar_ano(conexao, ano):
                 "SELECT COUNT(*) FROM bronze.scr_data_raw WHERE arquivo_origem = ?",
                 [nome_arquivo],
             ).fetchone()[0]
-            print(f"    {nome_arquivo}: {linhas} linhas inseridas")
+            logger.info(f"{nome_arquivo}: {linhas} linhas inseridas")
 
             caminho_csv.unlink()  # apaga o CSV extraído para economizar espaço em disco
 
     caminho_zip.unlink()  # apaga o zip do ano, já processado
-    print(f"Ano {ano}: concluído.\n")
+    logger.info(f"Ano {ano}: concluído.")
 
 
 if __name__ == "__main__":
@@ -163,6 +169,6 @@ if __name__ == "__main__":
     total_geral = conexao.execute(
         "SELECT COUNT(*) FROM bronze.scr_data_raw"
     ).fetchone()[0]
-    print(f"\nTOTAL GERAL na tabela bronze.scr_data_raw: {total_geral}")
+    logger.info(f"TOTAL GERAL na tabela bronze.scr_data_raw: {total_geral}")
 
     conexao.close()
