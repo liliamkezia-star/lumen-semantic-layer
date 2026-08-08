@@ -17,5 +17,5 @@ select
     ativo_problematico,
     ano_arquivo,
     arquivo_origem,
-    timestamp_coleta
+    timestamp_ultima_coleta
 from silver.credito_uf_modalidade

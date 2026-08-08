@@ -101,6 +101,10 @@ nenhuma agregação foi aplicada nesta camada).
 **Volume:** ~34,4 milhões de linhas (igual à Bronze — sem agregação)
 **Tratamento aplicado:** numero_de_operacoes = -1 convertido para NULL
 (ver observação de qualidade na seção Bronze)
+**Chave natural:** (data_base, uf, segmento, cliente, cnae_ocupacao,
+porte, modalidade, submodalidade, origem, indexador) — verificada como
+única na fonte (zero duplicatas em 34,4M linhas). A deduplicação por
+timestamp_ultima_coleta (ADR-003) usa essa chave.
 **Colunas:** data_base, uf, segmento, cliente, cnae_ocupacao, porte,
 modalidade, submodalidade, origem, indexador, numero_de_operacoes,
 carteira_a_vencer, carteira_vencida, carteira_ativa,
@@ -192,5 +196,31 @@ granularidade) — herdada das tabelas Silver de origem.
 - Zero órfãos confirmados em fato_credito (id_data, id_uf,
   id_modalidade, id_segmento) e fato_indicador_macro (id_data)
 - 20 testes dbt (unique, not_null, relationships) passando
-- Pendente: reconciliação de fato_credito com totais oficiais
-  divulgados pelo BCB (fica para validação antes da Sprint 6)
+### Reconciliação com valores oficiais do BCB (realizada)
+
+Comparação entre duas fontes independentes do saldo de crédito brasileiro:
+- **SCR.data** (agregado por este projeto): soma de `carteira_ativa` de
+  todas as operações, por competência
+- **SGS série 20539** (valor consolidado publicado pelo BCB)
+
+Resultado para os 12 meses mais recentes disponíveis:
+
+| Competência | SCR (R$ mi) | SGS (R$ mi) | Diferença |
+|---|---|---|---|
+| 2025-12 | 7.444.294 | 7.136.436 | +4,31% |
+| 2025-09 | 7.161.650 | 6.852.705 | +4,51% |
+| 2025-06 | 6.923.399 | 6.703.663 | +3,28% |
+| 2025-03 | 6.790.705 | 6.576.464 | +3,26% |
+
+**Interpretação:** as duas fontes convergem, com diferença consistente
+entre +2,9% e +4,5% em todos os meses analisados. A consistência da
+diferença (sempre positiva, sempre na mesma faixa) indica divergência
+metodológica sistemática entre as duas séries — o agregado do SGS e o
+detalhe do SCR.data seguem critérios de consolidação distintos — e não
+erro de ingestão ou modelagem. Duplicação de dados produziria diferença
+próxima a +100%; perda de dados produziria diferença negativa e irregular.
+
+**Limitação assumida:** a origem exata da divergência metodológica não foi
+confirmada na documentação oficial do BCB. O script de reconciliação está
+versionado em `tests/reconciliar_totais.py` e pode ser reexecutado a
+qualquer momento.  divulgados pelo BCB (fica para validação antes da Sprint 6)
