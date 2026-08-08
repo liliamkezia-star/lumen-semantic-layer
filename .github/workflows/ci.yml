@@ -39,7 +39,7 @@ jobs:
             outputs:
               ci:
                 type: duckdb
-                path: 'lumen_ci.duckdb'
+                path: '${{ github.workspace }}/lumen_ci.duckdb'
                 threads: 4
           EOF
 
