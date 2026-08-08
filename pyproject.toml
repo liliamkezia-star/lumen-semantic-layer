@@ -1,0 +1,23 @@
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes (erros reais: variável não usada, import quebrado)
+    "I",    # isort (ordenação de imports)
+    "UP",   # pyupgrade (sintaxe moderna do Python)
+    "B",    # flake8-bugbear (bugs prováveis)
+    "DTZ",  # flake8-datetimez (datetime sem timezone)
+]
+
+ignore = [
+    # Mensagens de erro detalhadas são intencionais neste projeto:
+    # ajudam a diagnosticar problemas de schema/API sem abrir o código.
+    "TRY003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Blocos SQL longos em strings: quebrar as linhas prejudicaria a leitura.
+"tests/criar_banco_ci.py" = ["E501"]
+"tests/reconciliar_totais.py" = ["E501"]
