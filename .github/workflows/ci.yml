@@ -30,7 +30,7 @@ jobs:
       - name: Rodar testes de qualidade (pytest)
         run: pytest tests/ -v
 
-- name: Configurar profile do dbt (CI)
+      - name: Configurar profile do dbt (CI)
         run: |
           mkdir -p ~/.dbt
           cat > ~/.dbt/profiles.yml << 'EOF'
@@ -39,7 +39,7 @@ jobs:
             outputs:
               ci:
                 type: duckdb
-                path: '${{ github.workspace }}/lumen_ci.duckdb'
+                path: 'lumen_ci.duckdb'
                 threads: 4
           EOF
 
@@ -48,4 +48,4 @@ jobs:
 
       - name: dbt build (modelos + testes)
         working-directory: transform/dbt
-        run: dbt build --target ci
+        run: dbt build --target ci --project-dir . --profiles-dir ~/.dbt
