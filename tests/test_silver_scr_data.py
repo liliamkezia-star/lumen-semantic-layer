@@ -25,12 +25,34 @@ COLUNAS_BRONZE = [
     "ativo_problematico", "ano_arquivo", "arquivo_origem", "timestamp_coleta",
 ]
 
+# Tipos que espelham o que o DuckDB infere ao ler o CSV real do SCR.data.
+# data_base é DATE (não VARCHAR) porque a fonte usa formato ISO e o
+# read_csv detecta isso automaticamente — o teste precisa refletir a
+# realidade do banco, não uma suposição.
+COLUNAS_INTEIRAS = {"numero_de_operacoes", "ano_arquivo"}
+COLUNAS_DATA = {"data_base"}
+COLUNAS_TEXTO = {
+    "uf", "segmento", "cliente", "cnae_ocupacao", "porte", "modalidade",
+    "submodalidade", "origem", "indexador", "arquivo_origem", "timestamp_coleta",
+}
+
+
+def tipo_da_coluna(nome):
+    if nome in COLUNAS_INTEIRAS:
+        return "INTEGER"
+    if nome in COLUNAS_DATA:
+        return "DATE"
+    if nome in COLUNAS_TEXTO:
+        return "VARCHAR"
+    return "DOUBLE"
+
+
 DADOS_SINTETICOS = [
     # Linha normal, numero_de_operacoes válido
     ("2024-01-31", "PB", "Livre", "PF", "Comércio", "N/A", "Cartão de crédito",
      "Rotativo", "Sem destinação específica", "Prefixado", 150,
      1000.0, 500.0, 0.0, 0.0, 0.0, 0.0, 1500.0, 0.0, 0.0, 0.0, 1500.0, 50.0, 20.0,
-     2024, "scrdata_202401.csv", "url-teste", ),
+     2024, "scrdata_202401.csv", "url-teste"),
     # Linha com o valor sentinela -1 (deveria virar NULL na Silver)
     ("2024-01-31", "PB", "Livre", "PJ", "Indústria", "Médio", "Capital de giro",
      "N/A", "Sem destinação específica", "Prefixado", -1,
@@ -44,10 +66,7 @@ def conexao():
     con = duckdb.connect(":memory:")
     con.execute("CREATE SCHEMA IF NOT EXISTS bronze;")
 
-    colunas_sql = ", ".join(
-        f"{c} {'INTEGER' if c in ('numero_de_operacoes', 'ano_arquivo') else 'VARCHAR' if c in ('data_base', 'uf', 'segmento', 'cliente', 'cnae_ocupacao', 'porte', 'modalidade', 'submodalidade', 'origem', 'indexador', 'arquivo_origem', 'timestamp_coleta') else 'DOUBLE'}"
-        for c in COLUNAS_BRONZE
-    )
+    colunas_sql = ", ".join(f"{c} {tipo_da_coluna(c)}" for c in COLUNAS_BRONZE)
     con.execute(f"CREATE TABLE bronze.scr_data_raw ({colunas_sql});")
 
     placeholders = ", ".join(["?"] * len(COLUNAS_BRONZE))
@@ -80,6 +99,21 @@ def test_valor_valido_preservado(conexao):
         WHERE uf = 'PB' AND cliente = 'PF'
     """).fetchone()[0]
     assert resultado == 150, f"Esperava 150, encontrado {resultado}"
+
+
+def test_data_base_e_tipo_date(conexao):
+    """data_base deve ser DATE na Silver, garantido por CAST explícito —
+    não por inferência automática da camada anterior. Sem isso, o join
+    com dim_calendario em fato_credito dependeria de cast implícito, que
+    pode se comportar de forma diferente após a migração para Fabric
+    (Spark infere tipos de forma distinta do DuckDB)."""
+    tipo = conexao.execute("""
+        SELECT data_type FROM information_schema.columns
+        WHERE table_schema = 'silver'
+          AND table_name = 'credito_uf_modalidade'
+          AND column_name = 'data_base'
+    """).fetchone()[0]
+    assert tipo == "DATE", f"data_base deveria ser DATE, é {tipo}"
 
 
 def test_granularidade_preservada(conexao):
