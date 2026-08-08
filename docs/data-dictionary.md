@@ -101,6 +101,10 @@ nenhuma agregação foi aplicada nesta camada).
 **Volume:** ~34,4 milhões de linhas (igual à Bronze — sem agregação)
 **Tratamento aplicado:** numero_de_operacoes = -1 convertido para NULL
 (ver observação de qualidade na seção Bronze)
+**Chave natural:** (data_base, uf, segmento, cliente, cnae_ocupacao,
+porte, modalidade, submodalidade, origem, indexador) — verificada como
+única na fonte (zero duplicatas em 34,4M linhas). A deduplicação por
+timestamp_ultima_coleta (ADR-003) usa essa chave.
 **Colunas:** data_base, uf, segmento, cliente, cnae_ocupacao, porte,
 modalidade, submodalidade, origem, indexador, numero_de_operacoes,
 carteira_a_vencer, carteira_vencida, carteira_ativa,
