@@ -32,7 +32,7 @@ COLUNAS_ESPERADAS = {
 }
 
 
-def validar_schema_csv(conexao, caminho_csv, nome_arquivo):
+def validar_schema_csv(conexao, caminho_csv: Path, nome_arquivo: str) -> None:
     """Lê apenas o cabeçalho do CSV (sem carregar os dados) e confere se
     as colunas esperadas estão presentes, antes de processar o arquivo
     inteiro. Evita gastar tempo/memória processando um arquivo com
@@ -52,7 +52,7 @@ def validar_schema_csv(conexao, caminho_csv, nome_arquivo):
         )
 
 
-def ano_ja_carregado(conexao, ano):
+def ano_ja_carregado(conexao, ano: int) -> bool:
     existe_tabela = conexao.execute("""
         SELECT COUNT(*) FROM information_schema.tables
         WHERE table_schema = 'bronze' AND table_name = 'scr_data_raw'
@@ -67,10 +67,13 @@ def ano_ja_carregado(conexao, ano):
     return total > 0
 
 
-def baixar_zip_do_ano(ano):
+def baixar_zip_do_ano(ano: int) -> tuple[Path, str]:
     """Baixa o ZIP do ano com timeout e retry. Se a conexão cair no meio
     do download, o arquivo parcial é descartado antes de tentar de novo,
-    evitando processar um ZIP corrompido/incompleto."""
+    evitando processar um ZIP corrompido/incompleto.
+
+    Erros 4xx (ex: ano inexistente na fonte) NÃO entram em retry: indicam
+    problema no pedido, não instabilidade — repetir daria o mesmo erro."""
     url = f"https://www.bcb.gov.br/pda/desig/scrdata_{ano}.zip"
     destino = PASTA_TEMP / f"scrdata_{ano}.zip"
     PASTA_TEMP.mkdir(parents=True, exist_ok=True)
@@ -88,12 +91,29 @@ def baixar_zip_do_ano(ano):
 
             return destino, url
 
+        except requests.exceptions.HTTPError as erro:
+            status = erro.response.status_code if erro.response is not None else None
+            if destino.exists():
+                destino.unlink()
+
+            if status is not None and 400 <= status < 500:
+                logger.error(
+                    f"Ano {ano}: erro {status} (arquivo indisponível na fonte, sem retry)"
+                )
+                raise
+
+            logger.warning(f"Falha no download (tentativa {tentativa}, erro {status})")
+
+            if tentativa == MAX_TENTATIVAS_DOWNLOAD:
+                raise RuntimeError(
+                    f"Download do ano {ano} falhou após {MAX_TENTATIVAS_DOWNLOAD} tentativas"
+                ) from erro
+
         except (requests.exceptions.Timeout,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.HTTPError) as erro:
+                requests.exceptions.ConnectionError) as erro:
             logger.warning(f"Falha no download (tentativa {tentativa}): {erro}")
             if destino.exists():
-                destino.unlink()  # descarta arquivo parcial/corrompido
+                destino.unlink()
 
             if tentativa == MAX_TENTATIVAS_DOWNLOAD:
                 raise RuntimeError(
@@ -103,7 +123,7 @@ def baixar_zip_do_ano(ano):
     raise RuntimeError(f"Download do ano {ano} falhou de forma inesperada")
 
 
-def processar_ano(conexao, ano):
+def processar_ano(conexao, ano: int) -> None:
     if ano_ja_carregado(conexao, ano):
         logger.info(f"Ano {ano}: já carregado anteriormente, pulando.")
         return

@@ -22,16 +22,36 @@ URL_POPULACAO = (
 )
 
 
-def buscar_com_retry(url, nome_fonte):
-    """Chama a URL com timeout e tenta novamente em caso de falha de
-    rede, com espera crescente entre tentativas (backoff exponencial)."""
+def buscar_com_retry(url: str, nome_fonte: str) -> requests.Response:
+    """Chama a URL com timeout e tenta novamente em caso de falha
+    transitória, com espera crescente entre tentativas (backoff
+    exponencial).
+
+    Erros 4xx (recurso inexistente, requisição malformada, sem permissão)
+    NÃO são reexecutados: indicam problema no pedido, não instabilidade —
+    repetir a mesma chamada produziria o mesmo erro, desperdiçando tempo.
+    Apenas timeouts, falhas de conexão e erros 5xx entram no laço."""
     for tentativa in range(1, MAX_TENTATIVAS + 1):
         try:
             resposta = requests.get(url, timeout=TIMEOUT_SEGUNDOS)
             resposta.raise_for_status()
             return resposta
-        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError,
-                requests.exceptions.HTTPError) as erro:
+        except requests.exceptions.HTTPError as erro:
+            status = erro.response.status_code if erro.response is not None else None
+
+            if status is not None and 400 <= status < 500:
+                logger.error(
+                    f"{nome_fonte}: erro {status} (problema na requisição, não em retry): {erro}"
+                )
+                raise
+
+            espera = 2 ** (tentativa - 1)
+            logger.warning(
+                f"{nome_fonte}: tentativa {tentativa} falhou (erro {status}), "
+                f"esperando {espera}s..."
+            )
+            time.sleep(espera)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as erro:
             espera = 2 ** (tentativa - 1)
             logger.warning(
                 f"{nome_fonte}: tentativa {tentativa} falhou ({erro}), esperando {espera}s..."
