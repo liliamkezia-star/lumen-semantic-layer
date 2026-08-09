@@ -28,7 +28,7 @@ models:
     columns:
       - name: id_modalidade
         description: >
-          Chave substituta gerada por hash MD5 da chave natural
+          Chave substituta gerada por hash (UBIGINT) da chave natural
           (modalidade + submodalidade + origem + indexador). Estável entre
           execuções: a mesma combinação sempre produz o mesmo ID, mesmo
           com a dimensão sendo reconstruída integralmente a cada dbt run.
@@ -41,7 +41,7 @@ models:
     columns:
       - name: id_segmento
         description: >
-          Chave substituta gerada por hash MD5 da chave natural
+          Chave substituta gerada por hash (UBIGINT) da chave natural
           (segmento + cliente + cnae_ocupacao + porte). Estável entre
           execuções, pelo mesmo motivo de dim_modalidade.
         tests:
