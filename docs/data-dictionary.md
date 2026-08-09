@@ -213,7 +213,8 @@ Fato de indicadores macroeconômicos e de crédito nacional (SGS),
 unindo indicador_macro e serie_credito_mensal.
 
 **Origem:** stg_indicador_macro, stg_serie_credito_mensal
-**Volume:** 7.264 linhas
+**Volume:** ~7.270 linhas (cresce organicamente a cada coleta, pois as
+séries diárias do SGS recebem novos dados a cada dia útil)
 **Observação:** mistura granularidade diária e mensal (ver coluna
 granularidade) — herdada das tabelas Silver de origem.
 
