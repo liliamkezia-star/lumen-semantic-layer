@@ -6,4 +6,4 @@ select
     unidade_valor,
     granularidade,
     timestamp_ultima_coleta
-from silver.indicador_macro
+from {{ source('silver', 'indicador_macro') }}
