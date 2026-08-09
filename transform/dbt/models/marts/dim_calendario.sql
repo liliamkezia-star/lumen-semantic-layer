@@ -1,13 +1,18 @@
+-- CAST explícito para DATE: generate_series do DuckDB retorna TIMESTAMP
+-- quando o passo é um INTERVAL, mesmo com limites DATE. Sem o cast, o
+-- join com fato_credito (cujo data_base é DATE explícito) dependeria de
+-- conversão implícita, e o Power BI receberia uma coluna TIMESTAMP —
+-- o recurso "Marcar como Tabela de Data" e boa parte das funções DAX de
+-- time intelligence esperam DATE genuíno.
 with datas_geradas as (
     select
-        generate_series as data
+        cast(generate_series as date) as data
     from generate_series(
         cast('2015-01-01' as date),
         cast('2026-12-31' as date),
         interval '1 day'
     )
 )
-
 select
     cast(strftime(data, '%Y%m%d') as integer) as id_data,
     data,
