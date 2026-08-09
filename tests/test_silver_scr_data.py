@@ -233,3 +233,26 @@ def test_valores_monetarios_nao_negativos(conexao, coluna):
     assert negativos == 0, f"{coluna}: {negativos} valores negativos encontrados"
 
 
+def test_colunas_faixa_vencimento_preservadas(conexao):
+    """As 8 colunas de decomposição por prazo devem estar presentes na
+    Silver. Elas foram descartadas por engano numa versão anterior, em
+    contradição com o ADR-004 (a Silver preserva a fonte, não decide
+    relevância analítica). Este teste impede que a perda se repita
+    silenciosamente numa refatoração futura."""
+    colunas = set(conexao.sql(
+        "SELECT * FROM silver.credito_uf_modalidade LIMIT 0"
+    ).columns)
+
+    colunas_esperadas = {
+        "a_vencer_ate_90_dias",
+        "a_vencer_de_91_ate_360_dias",
+        "a_vencer_de_361_ate_1080_dias",
+        "a_vencer_de_1081_ate_1800_dias",
+        "a_vencer_de_1801_ate_5400_dias",
+        "a_vencer_acima_de_5400_dias",
+        "vencido_de_15_ate_90_dias",
+        "vencido_acima_de_90_dias",
+    }
+
+    faltando = colunas_esperadas - colunas
+    assert not faltando, f"Colunas de faixa de vencimento perdidas: {faltando}"
