@@ -4,4 +4,4 @@ select
     nome_uf,
     id_regiao,
     nome_regiao
-from silver.localidade
+from {{ source('silver', 'localidade') }}

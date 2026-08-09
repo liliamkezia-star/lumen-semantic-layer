@@ -4,4 +4,4 @@ select
     ano,
     populacao_estimada,
     timestamp_ultima_coleta
-from silver.populacao_uf
+from {{ source('silver', 'populacao_uf') }}

@@ -26,4 +26,4 @@ select
     ano_arquivo,
     arquivo_origem,
     timestamp_ultima_coleta
-from silver.credito_uf_modalidade
+from {{ source('silver', 'credito_uf_modalidade') }}
