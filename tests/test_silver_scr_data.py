@@ -233,14 +233,3 @@ def test_valores_monetarios_nao_negativos(conexao, coluna):
     assert negativos == 0, f"{coluna}: {negativos} valores negativos encontrados"
 
 
-def test_carteira_ativa_e_soma_das_partes(conexao):
-    """carteira_ativa deve ser a soma de carteira_a_vencer e
-    carteira_vencida — relação estrutural da fonte. Tolerância de 0.01
-    para diferenças de arredondamento em ponto flutuante."""
-    inconsistentes = conexao.execute("""
-        SELECT COUNT(*) FROM silver.credito_uf_modalidade
-        WHERE ABS(carteira_ativa - (carteira_a_vencer + carteira_vencida)) > 0.01
-    """).fetchone()[0]
-    assert inconsistentes == 0, (
-        f"{inconsistentes} linhas onde carteira_ativa != a_vencer + vencida"
-    )

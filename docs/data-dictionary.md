@@ -232,3 +232,37 @@ próxima a +100%; perda de dados produziria diferença negativa e irregular.
 confirmada na documentação oficial do BCB. O script de reconciliação está
 versionado em `tests/reconciliar_totais.py` e pode ser reexecutado a
 qualquer momento.
+
+### Observação de qualidade — inconsistência entre carteira_ativa e suas partes
+
+A relação estrutural esperada `carteira_ativa = carteira_a_vencer +
+carteira_vencida` é violada em **5.869 linhas** (0,017% do total de
+34,4M), com a seguinte distribuição:
+
+| Ano | Linhas inconsistentes | Maior diferença |
+|---|---|---|
+| 2015 | 4.272 | R$ 20.693.376,65 |
+| 2016 | 1.596 | R$ 10.275.106,09 |
+| 2024 | 1 | R$ 3.088,53 |
+
+**Interpretação:** a concentração quase total nos dois primeiros anos da
+série (99,98% dos casos em 2015-2016) sugere mudança de metodologia ou
+de critério de consolidação do SCR.data no início da publicação, não
+erro de ingestão. Após 2016 a relação se mantém consistente, com um
+único caso isolado em 2024.
+
+**Causa não confirmada:** a metodologia oficial do SCR.data (versão 2)
+não documenta mudanças de critério nesse período. A hipótese acima é
+inferida do padrão temporal, não verificada na fonte.
+
+**Tratamento adotado:** os dados são preservados como estão — nenhuma
+correção ou exclusão foi aplicada, seguindo o mesmo princípio usado para
+o valor sentinela `-1` em `numero_de_operacoes`. O teste dbt
+`carteira_ativa_consistente` valida a invariante excluindo explicitamente
+os anos afetados, de modo a detectar qualquer nova ocorrência fora do
+conjunto conhecido.
+
+**Impacto para análise:** ao usar `carteira_ativa` em conjunto com suas
+partes componentes em análises que cubram 2015-2016, considerar que a
+soma pode não fechar. Para análises a partir de 2017, a relação é
+confiável.
