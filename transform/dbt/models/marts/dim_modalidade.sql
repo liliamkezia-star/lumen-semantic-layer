@@ -25,12 +25,7 @@ with combinacoes_unicas as (
 )
 
 select
-    hash(
-        coalesce(modalidade, '')
-        || '|' || coalesce(submodalidade, '')
-        || '|' || coalesce(origem, '')
-        || '|' || coalesce(indexador, '')
-    ) as id_modalidade,
+    {{ gerar_chave_substituta(['modalidade', 'submodalidade', 'origem', 'indexador']) }} as id_modalidade,
     modalidade,
     submodalidade,
     origem,

@@ -15,12 +15,7 @@ with combinacoes_unicas as (
 )
 
 select
-    hash(
-        coalesce(segmento, '')
-        || '|' || coalesce(cliente, '')
-        || '|' || coalesce(cnae_ocupacao, '')
-        || '|' || coalesce(porte, '')
-    ) as id_segmento,
+    {{ gerar_chave_substituta(['segmento', 'cliente', 'cnae_ocupacao', 'porte']) }} as id_segmento,
     segmento,
     cliente,
     cnae_ocupacao,
