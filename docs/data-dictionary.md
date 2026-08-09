@@ -107,9 +107,26 @@ porte, modalidade, submodalidade, origem, indexador) — verificada como
 timestamp_ultima_coleta (ADR-003) usa essa chave.
 **Colunas:** data_base, uf, segmento, cliente, cnae_ocupacao, porte,
 modalidade, submodalidade, origem, indexador, numero_de_operacoes,
-carteira_a_vencer, carteira_vencida, carteira_ativa,
-carteira_inadimplencia, ativo_problematico, ano_arquivo, arquivo_origem,
-timestamp_coleta
+a_vencer_ate_90_dias, a_vencer_de_91_ate_360_dias,
+a_vencer_de_361_ate_1080_dias, a_vencer_de_1081_ate_1800_dias,
+a_vencer_de_1801_ate_5400_dias, a_vencer_acima_de_5400_dias,
+vencido_de_15_ate_90_dias, vencido_acima_de_90_dias, carteira_a_vencer,
+carteira_vencida, carteira_ativa, carteira_inadimplencia,
+ativo_problematico, ano_arquivo, arquivo_origem, timestamp_ultima_coleta
+
+**Faixas de vencimento:** as 8 colunas de decomposição por prazo
+(`a_vencer_*` e `vencido_*`) são preservadas na Silver conforme o
+princípio do ADR-004 — a Silver não decide relevância analítica, apenas
+limpa e preserva a fonte. Elas descrevem o perfil de risco temporal da
+carteira (crédito com vencimento em 90 dias tem risco distinto de um com
+vencimento em 5 anos).
+
+Essas colunas **não** foram propagadas para `gold.fato_credito`: a Gold é
+a camada de consumo analítico, e nenhum dos 15 KPIs planejados as utiliza
+no momento. A inclusão será avaliada quando houver necessidade concreta —
+provavelmente na Sprint 8 (dashboard de Risco & Inadimplência) ou Sprint 9
+(features de ML) — momento em que a decisão será registrada como ADR,
+identificando qual KPI ou feature a motivou.
 
 ### silver.localidade
 Cadastro de UFs, deduplicado por id_uf a partir da Bronze.
