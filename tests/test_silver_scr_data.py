@@ -197,3 +197,50 @@ def test_colunas_dimensao_preservadas(conexao):
     colunas_esperadas = {"cnae_ocupacao", "porte", "submodalidade", "origem", "indexador"}
     faltando = colunas_esperadas - colunas
     assert not faltando, f"Colunas de dimensão perdidas: {faltando}"
+
+
+def test_colunas_chave_sem_nulos(conexao):
+    """Colunas-chave nunca devem ser nulas na Silver — um nulo aqui
+    indicaria falha na ingestão ou na transformação, e quebraria os
+    joins do star schema (gerando órfãos ou perda de linhas)."""
+    nulos = conexao.execute("""
+        SELECT COUNT(*) FROM silver.credito_uf_modalidade
+        WHERE data_base IS NULL
+           OR uf IS NULL
+           OR segmento IS NULL
+           OR cliente IS NULL
+           OR modalidade IS NULL
+    """).fetchone()[0]
+    assert nulos == 0, f"Encontradas {nulos} linhas com colunas-chave nulas"
+
+
+@pytest.mark.parametrize("coluna", [
+    "carteira_a_vencer",
+    "carteira_vencida",
+    "carteira_ativa",
+    "carteira_inadimplencia",
+    "ativo_problematico",
+])
+def test_valores_monetarios_nao_negativos(conexao, coluna):
+    """Todas as métricas de carteira representam saldos em reais — não
+    podem ser negativas. Verificado no dado real: zero ocorrências
+    negativas em 34,4M linhas, confirmando que a regra é válida e não
+    apenas uma suposição."""
+    negativos = conexao.execute(f"""
+        SELECT COUNT(*) FROM silver.credito_uf_modalidade
+        WHERE {coluna} < 0
+    """).fetchone()[0]
+    assert negativos == 0, f"{coluna}: {negativos} valores negativos encontrados"
+
+
+def test_carteira_ativa_e_soma_das_partes(conexao):
+    """carteira_ativa deve ser a soma de carteira_a_vencer e
+    carteira_vencida — relação estrutural da fonte. Tolerância de 0.01
+    para diferenças de arredondamento em ponto flutuante."""
+    inconsistentes = conexao.execute("""
+        SELECT COUNT(*) FROM silver.credito_uf_modalidade
+        WHERE ABS(carteira_ativa - (carteira_a_vencer + carteira_vencida)) > 0.01
+    """).fetchone()[0]
+    assert inconsistentes == 0, (
+        f"{inconsistentes} linhas onde carteira_ativa != a_vencer + vencida"
+    )
