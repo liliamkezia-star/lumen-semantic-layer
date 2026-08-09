@@ -33,6 +33,8 @@ Thumbs.db
 
 # Banco de dados local (dados, não código)
 *.duckdb
+*.duckdb.wal
+*.duckdb.tmp/
 
 # Arquivos de dados grandes (SCR.data) - nunca versionar
 ingestion/*.zip
