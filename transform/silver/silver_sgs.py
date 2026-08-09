@@ -1,4 +1,12 @@
+import sys
+from pathlib import Path
+
 import duckdb
+
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+from common.logging_config import configurar_logger
+
+logger = configurar_logger(__name__)
 
 CAMINHO_BANCO = "lumen.duckdb"
 
@@ -31,7 +39,7 @@ GRANULARIDADE = {
 }
 
 
-def montar_case_unidade():
+def montar_case_unidade() -> str:
     """Monta a expressão CASE WHEN para a coluna de unidade a partir do
     dicionário UNIDADES, evitando repetir a lista em duas queries."""
     linhas_case = [
@@ -40,7 +48,7 @@ def montar_case_unidade():
     return "CASE nome_serie\n" + "\n".join(linhas_case) + "\nELSE 'não documentado'\nEND"
 
 
-def montar_case_granularidade():
+def montar_case_granularidade() -> str:
     """Monta a expressão CASE WHEN para a coluna de granularidade, a
     partir do dicionário GRANULARIDADE. Documenta explicitamente que
     indicador_macro mistura séries diárias e mensais — evita que alguém
@@ -51,7 +59,7 @@ def montar_case_granularidade():
     return "CASE nome_serie\n" + "\n".join(linhas_case) + "\nELSE 'não documentado'\nEND"
 
 
-def criar_cte_deduplicada():
+def criar_cte_deduplicada() -> str:
     """CTE compartilhada: converte tipos e mantém apenas a coleta mais
     recente de cada (nome_serie, data_referencia), via ROW_NUMBER."""
     return """
@@ -69,7 +77,7 @@ def criar_cte_deduplicada():
     """
 
 
-def construir_silver_sgs(conexao):
+def construir_silver_sgs(conexao) -> None:
     """Cria as tabelas silver.indicador_macro e silver.serie_credito_mensal
     a partir de bronze.sgs_series_raw, na conexão DuckDB fornecida.
 
@@ -128,8 +136,8 @@ if __name__ == "__main__":
         "SELECT COUNT(*) FROM silver.serie_credito_mensal"
     ).fetchone()[0]
 
-    print(f"Total em silver.indicador_macro: {total_macro}")
-    print(f"Total em silver.serie_credito_mensal: {total_credito}")
+    logger.info(f"Total em silver.indicador_macro: {total_macro}")
+    logger.info(f"Total em silver.serie_credito_mensal: {total_credito}")
 
     series_macro = conexao.execute(
         "SELECT DISTINCT nome_serie, granularidade FROM silver.indicador_macro"
@@ -138,7 +146,7 @@ if __name__ == "__main__":
         "SELECT DISTINCT nome_serie, granularidade FROM silver.serie_credito_mensal"
     ).fetchall()
 
-    print("\nSéries em indicador_macro:", series_macro)
-    print("Séries em serie_credito_mensal:", series_credito)
+    logger.info(f"Séries em indicador_macro: {series_macro}")
+    logger.info(f"Séries em serie_credito_mensal: {series_credito}")
 
     conexao.close()

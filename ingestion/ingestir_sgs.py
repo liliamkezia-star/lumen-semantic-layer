@@ -1,8 +1,15 @@
+import sys
 import time
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import duckdb
 import requests
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from common.logging_config import configurar_logger
+
+logger = configurar_logger(__name__)
 
 SERIES_SGS = {
     "selic_diaria": 11,
@@ -50,7 +57,9 @@ def chamar_api_com_retry(codigo, data_inicial):
             resposta, url = chamar_api(codigo, data_inicial)
         except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as erro:
             espera = 2 ** (tentativa - 1)
-            print(f"  tentativa {tentativa} falhou (falha de rede: {erro}), esperando {espera}s...")
+            logger.warning(
+                f"tentativa {tentativa} falhou (falha de rede: {erro}), esperando {espera}s..."
+            )
             time.sleep(espera)
             continue
 
@@ -66,7 +75,7 @@ def chamar_api_com_retry(codigo, data_inicial):
 
         espera = 2 ** (tentativa - 1)
         motivo = "JSON inválido" if resposta.status_code == 200 else f"status {resposta.status_code}"
-        print(f"  tentativa {tentativa} falhou ({motivo}), esperando {espera}s...")
+        logger.warning(f"tentativa {tentativa} falhou ({motivo}), esperando {espera}s...")
         time.sleep(espera)
 
     raise RuntimeError(f"Falhou após {MAX_TENTATIVAS} tentativas para código {codigo}")
@@ -100,13 +109,13 @@ def buscar_serie(nome, codigo):
     resposta, url = chamar_api_com_retry(codigo, DATA_INICIAL_COMPLETA)
 
     if resposta.status_code == 406:
-        print(f"{nome}: periodicidade diária detectada, ajustando janela...")
+        logger.info(f"{nome}: periodicidade diária detectada, ajustando janela...")
         resposta, url = chamar_api_com_retry(codigo, DATA_INICIAL_JANELA_10_ANOS)
 
     resposta.raise_for_status()
     dados = resposta.json()
     validar_schema_resposta(dados, nome)
-    print(f"{nome} (código {codigo}): {len(dados)} registros")
+    logger.info(f"{nome} (código {codigo}): {len(dados)} registros")
     return dados, url
 
 
@@ -136,7 +145,7 @@ if __name__ == "__main__":
         dados, url = buscar_serie(nome, codigo)
         todas_as_linhas.extend(montar_linhas(nome, codigo, dados, url))
 
-    print(f"\nTotal de linhas a inserir: {len(todas_as_linhas)}")
+    logger.info(f"Total de linhas a inserir: {len(todas_as_linhas)}")
 
     conexao = duckdb.connect(CAMINHO_BANCO)
     conexao.execute("CREATE SCHEMA IF NOT EXISTS bronze;")
@@ -163,6 +172,6 @@ if __name__ == "__main__":
     total_na_tabela = conexao.execute(
         "SELECT COUNT(*) FROM bronze.sgs_series_raw"
     ).fetchone()[0]
-    print(f"Total de linhas agora na tabela: {total_na_tabela}")
+    logger.info(f"Total de linhas agora na tabela: {total_na_tabela}")
 
     conexao.close()
