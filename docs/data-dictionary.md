@@ -107,9 +107,26 @@ porte, modalidade, submodalidade, origem, indexador) — verificada como
 timestamp_ultima_coleta (ADR-003) usa essa chave.
 **Colunas:** data_base, uf, segmento, cliente, cnae_ocupacao, porte,
 modalidade, submodalidade, origem, indexador, numero_de_operacoes,
-carteira_a_vencer, carteira_vencida, carteira_ativa,
-carteira_inadimplencia, ativo_problematico, ano_arquivo, arquivo_origem,
-timestamp_coleta
+a_vencer_ate_90_dias, a_vencer_de_91_ate_360_dias,
+a_vencer_de_361_ate_1080_dias, a_vencer_de_1081_ate_1800_dias,
+a_vencer_de_1801_ate_5400_dias, a_vencer_acima_de_5400_dias,
+vencido_de_15_ate_90_dias, vencido_acima_de_90_dias, carteira_a_vencer,
+carteira_vencida, carteira_ativa, carteira_inadimplencia,
+ativo_problematico, ano_arquivo, arquivo_origem, timestamp_ultima_coleta
+
+**Faixas de vencimento:** as 8 colunas de decomposição por prazo
+(`a_vencer_*` e `vencido_*`) são preservadas na Silver conforme o
+princípio do ADR-004 — a Silver não decide relevância analítica, apenas
+limpa e preserva a fonte. Elas descrevem o perfil de risco temporal da
+carteira (crédito com vencimento em 90 dias tem risco distinto de um com
+vencimento em 5 anos).
+
+Essas colunas **não** foram propagadas para `gold.fato_credito`: a Gold é
+a camada de consumo analítico, e nenhum dos 15 KPIs planejados as utiliza
+no momento. A inclusão será avaliada quando houver necessidade concreta —
+provavelmente na Sprint 8 (dashboard de Risco & Inadimplência) ou Sprint 9
+(features de ML) — momento em que a decisão será registrada como ADR,
+identificando qual KPI ou feature a motivou.
 
 ### silver.localidade
 Cadastro de UFs, deduplicado por id_uf a partir da Bronze.
@@ -196,7 +213,8 @@ Fato de indicadores macroeconômicos e de crédito nacional (SGS),
 unindo indicador_macro e serie_credito_mensal.
 
 **Origem:** stg_indicador_macro, stg_serie_credito_mensal
-**Volume:** 7.264 linhas
+**Volume:** ~7.270 linhas (cresce organicamente a cada coleta, pois as
+séries diárias do SGS recebem novos dados a cada dia útil)
 **Observação:** mistura granularidade diária e mensal (ver coluna
 granularidade) — herdada das tabelas Silver de origem.
 
@@ -231,4 +249,38 @@ próxima a +100%; perda de dados produziria diferença negativa e irregular.
 **Limitação assumida:** a origem exata da divergência metodológica não foi
 confirmada na documentação oficial do BCB. O script de reconciliação está
 versionado em `tests/reconciliar_totais.py` e pode ser reexecutado a
-qualquer momento.  divulgados pelo BCB (fica para validação antes da Sprint 6)
+qualquer momento.
+
+### Observação de qualidade — inconsistência entre carteira_ativa e suas partes
+
+A relação estrutural esperada `carteira_ativa = carteira_a_vencer +
+carteira_vencida` é violada em **5.869 linhas** (0,017% do total de
+34,4M), com a seguinte distribuição:
+
+| Ano | Linhas inconsistentes | Maior diferença |
+|---|---|---|
+| 2015 | 4.272 | R$ 20.693.376,65 |
+| 2016 | 1.596 | R$ 10.275.106,09 |
+| 2024 | 1 | R$ 3.088,53 |
+
+**Interpretação:** a concentração quase total nos dois primeiros anos da
+série (99,98% dos casos em 2015-2016) sugere mudança de metodologia ou
+de critério de consolidação do SCR.data no início da publicação, não
+erro de ingestão. Após 2016 a relação se mantém consistente, com um
+único caso isolado em 2024.
+
+**Causa não confirmada:** a metodologia oficial do SCR.data (versão 2)
+não documenta mudanças de critério nesse período. A hipótese acima é
+inferida do padrão temporal, não verificada na fonte.
+
+**Tratamento adotado:** os dados são preservados como estão — nenhuma
+correção ou exclusão foi aplicada, seguindo o mesmo princípio usado para
+o valor sentinela `-1` em `numero_de_operacoes`. O teste dbt
+`carteira_ativa_consistente` valida a invariante excluindo explicitamente
+os anos afetados, de modo a detectar qualquer nova ocorrência fora do
+conjunto conhecido.
+
+**Impacto para análise:** ao usar `carteira_ativa` em conjunto com suas
+partes componentes em análises que cubram 2015-2016, considerar que a
+soma pode não fechar. Para análises a partir de 2017, a relação é
+confiável.

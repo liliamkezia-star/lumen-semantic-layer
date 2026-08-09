@@ -197,3 +197,62 @@ def test_colunas_dimensao_preservadas(conexao):
     colunas_esperadas = {"cnae_ocupacao", "porte", "submodalidade", "origem", "indexador"}
     faltando = colunas_esperadas - colunas
     assert not faltando, f"Colunas de dimensão perdidas: {faltando}"
+
+
+def test_colunas_chave_sem_nulos(conexao):
+    """Colunas-chave nunca devem ser nulas na Silver — um nulo aqui
+    indicaria falha na ingestão ou na transformação, e quebraria os
+    joins do star schema (gerando órfãos ou perda de linhas)."""
+    nulos = conexao.execute("""
+        SELECT COUNT(*) FROM silver.credito_uf_modalidade
+        WHERE data_base IS NULL
+           OR uf IS NULL
+           OR segmento IS NULL
+           OR cliente IS NULL
+           OR modalidade IS NULL
+    """).fetchone()[0]
+    assert nulos == 0, f"Encontradas {nulos} linhas com colunas-chave nulas"
+
+
+@pytest.mark.parametrize("coluna", [
+    "carteira_a_vencer",
+    "carteira_vencida",
+    "carteira_ativa",
+    "carteira_inadimplencia",
+    "ativo_problematico",
+])
+def test_valores_monetarios_nao_negativos(conexao, coluna):
+    """Todas as métricas de carteira representam saldos em reais — não
+    podem ser negativas. Verificado no dado real: zero ocorrências
+    negativas em 34,4M linhas, confirmando que a regra é válida e não
+    apenas uma suposição."""
+    negativos = conexao.execute(f"""
+        SELECT COUNT(*) FROM silver.credito_uf_modalidade
+        WHERE {coluna} < 0
+    """).fetchone()[0]
+    assert negativos == 0, f"{coluna}: {negativos} valores negativos encontrados"
+
+
+def test_colunas_faixa_vencimento_preservadas(conexao):
+    """As 8 colunas de decomposição por prazo devem estar presentes na
+    Silver. Elas foram descartadas por engano numa versão anterior, em
+    contradição com o ADR-004 (a Silver preserva a fonte, não decide
+    relevância analítica). Este teste impede que a perda se repita
+    silenciosamente numa refatoração futura."""
+    colunas = set(conexao.sql(
+        "SELECT * FROM silver.credito_uf_modalidade LIMIT 0"
+    ).columns)
+
+    colunas_esperadas = {
+        "a_vencer_ate_90_dias",
+        "a_vencer_de_91_ate_360_dias",
+        "a_vencer_de_361_ate_1080_dias",
+        "a_vencer_de_1081_ate_1800_dias",
+        "a_vencer_de_1801_ate_5400_dias",
+        "a_vencer_acima_de_5400_dias",
+        "vencido_de_15_ate_90_dias",
+        "vencido_acima_de_90_dias",
+    }
+
+    faltando = colunas_esperadas - colunas
+    assert not faltando, f"Colunas de faixa de vencimento perdidas: {faltando}"

@@ -51,8 +51,20 @@ def construir_silver_scr_data(conexao) -> None:
                 -- Causa raiz não confirmada na documentação oficial (ver
                 -- observação no dicionário de dados).
                 NULLIF(numero_de_operacoes, -1) AS numero_de_operacoes,
+                -- Faixas de vencimento: preservadas conforme ADR-004
+                -- (a Silver não decide relevância analítica, só limpa).
+                -- Descrevem o perfil de risco temporal da carteira.
+                a_vencer_ate_90_dias,
+                a_vencer_de_91_ate_360_dias,
+                a_vencer_de_361_ate_1080_dias,
+                a_vencer_de_1081_ate_1800_dias,
+                a_vencer_de_1801_ate_5400_dias,
+                a_vencer_acima_de_5400_dias,
+                vencido_de_15_ate_90_dias,
+                vencido_acima_de_90_dias,
                 carteira_a_vencer,
                 carteira_vencida,
+
                 carteira_ativa,
                 carteira_inadimplencia,
                 ativo_problematico,
@@ -79,8 +91,17 @@ def construir_silver_scr_data(conexao) -> None:
             origem,
             indexador,
             numero_de_operacoes,
+            a_vencer_ate_90_dias,
+            a_vencer_de_91_ate_360_dias,
+            a_vencer_de_361_ate_1080_dias,
+            a_vencer_de_1081_ate_1800_dias,
+            a_vencer_de_1801_ate_5400_dias,
+            a_vencer_acima_de_5400_dias,
+            vencido_de_15_ate_90_dias,
+            vencido_acima_de_90_dias,
             carteira_a_vencer,
             carteira_vencida,
+
             carteira_ativa,
             carteira_inadimplencia,
             ativo_problematico,
