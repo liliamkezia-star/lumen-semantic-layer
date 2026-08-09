@@ -231,4 +231,4 @@ próxima a +100%; perda de dados produziria diferença negativa e irregular.
 **Limitação assumida:** a origem exata da divergência metodológica não foi
 confirmada na documentação oficial do BCB. O script de reconciliação está
 versionado em `tests/reconciliar_totais.py` e pode ser reexecutado a
-qualquer momento.  divulgados pelo BCB (fica para validação antes da Sprint 6)
+qualquer momento.
