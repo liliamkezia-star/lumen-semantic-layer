@@ -9,6 +9,7 @@ select = [
     "UP",   # pyupgrade (sintaxe moderna do Python)
     "B",    # flake8-bugbear (bugs prováveis)
     "DTZ",  # flake8-datetimez (datetime sem timezone)
+    "N",    # pep8-naming (snake_case em funções, UPPER_CASE em constantes)
 ]
 
 ignore = [
