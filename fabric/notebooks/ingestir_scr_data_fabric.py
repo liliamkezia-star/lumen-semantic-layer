@@ -83,7 +83,9 @@ def ano_ja_carregado(ano):
     existe_tabela = spark.sql("SHOW TABLES IN bronze").filter("tableName = 'scr_data_raw'").count() > 0
     if not existe_tabela:
         return False
-    total = spark.sql(f"SELECT COUNT(*) AS total FROM bronze.scr_data_raw WHERE ano_arquivo = {ano}").collect()[0]["total"]
+    total = spark.sql(
+        f"SELECT COUNT(*) AS total FROM bronze.scr_data_raw WHERE ano_arquivo = {ano}"
+    ).collect()[0]["total"]
     return total > 0
 
 
