@@ -1,0 +1,577 @@
+// =====================================================================
+// LUMEN — CATÁLOGO DE MEDIDAS CERTIFICADAS v2
+// Tabela de medidas: fato_credito (Direct Lake, modelo lumen_semantico)
+//
+// MOTIVO DA REVISÃO
+// As 7 medidas da v1 (ADR-009) usam SUM() direto sobre colunas de SALDO.
+// O dicionário de dados classifica carteira_ativa, carteira_vencida,
+// carteira_a_vencer, carteira_inadimplencia e ativo_problematico como
+// SEMIADITIVAS: podem ser somadas entre UF/modalidade/segmento na mesma
+// competência, mas NÃO ao longo do tempo.
+// Sem filtro de competência, [Carteira Ativa Total] retorna a soma das
+// 132 competências — R$ 584,27 trilhões (valor registrado no próprio
+// ADR-009). O saldo real em dez/2025 é R$ 7,44 trilhões.
+// Para o agente analítico da Sprint 7, que responde em linguagem natural
+// sobre estas medidas, isso não é imprecisão: é uma resposta errada
+// entregue com confiança.
+//
+// CORREÇÃO: LASTNONBLANKVALUE sobre dim_calendario[data] — o saldo passa
+// a ser sempre o da última competência dentro do contexto de filtro.
+//
+// SEGUNDA CORREÇÃO (ADR-011): dim_calendario vai até 2026-12-31 (gerada por
+// date_spine), além do fim real dos dados (dez/2025). Qualquer medida que
+// dependa do "período atual" ou de "ano anterior" sem passar por
+// [Última Competência com Crédito] herda esse mesmo tipo de erro — inclusive
+// quando não há filtro de página. Ver seção 3.5.
+// =====================================================================
+
+
+// ---------------------------------------------------------------------
+// 1. SALDOS (semiaditivos — última competência do contexto)
+// ---------------------------------------------------------------------
+
+Carteira Ativa =
+LASTNONBLANKVALUE ( dim_calendario[data], SUM ( fato_credito[carteira_ativa] ) )
+
+Carteira a Vencer =
+LASTNONBLANKVALUE ( dim_calendario[data], SUM ( fato_credito[carteira_a_vencer] ) )
+
+Carteira Vencida =
+LASTNONBLANKVALUE ( dim_calendario[data], SUM ( fato_credito[carteira_vencida] ) )
+
+Carteira Inadimplência =
+LASTNONBLANKVALUE ( dim_calendario[data], SUM ( fato_credito[carteira_inadimplencia] ) )
+
+Ativo Problemático =
+LASTNONBLANKVALUE ( dim_calendario[data], SUM ( fato_credito[ativo_problematico] ) )
+
+
+// ---------------------------------------------------------------------
+// 2. CONTAGENS
+// ---------------------------------------------------------------------
+
+// Aditiva no tempo? NÃO. numero_de_operacoes também é estoque (operações
+// vivas na competência), não fluxo. Mesmo tratamento dos saldos.
+Número de Operações =
+LASTNONBLANKVALUE ( dim_calendario[data], SUM ( fato_credito[numero_de_operacoes] ) )
+
+// 26,3% das linhas de dez/2025 (81.700 de 310.419) têm
+// numero_de_operacoes NULL — valor sentinela -1 na fonte, convertido na
+// Silver (hipótese: supressão por sigilo estatístico). SUM ignora NULL
+// silenciosamente, então [Número de Operações] SUBESTIMA sem avisar.
+// Esta medida expõe a cobertura e deve aparecer junto do número.
+Cobertura Nº de Operações =
+VAR _Total =
+    LASTNONBLANKVALUE ( dim_calendario[data], COUNTROWS ( fato_credito ) )
+VAR _ComDado =
+    LASTNONBLANKVALUE (
+        dim_calendario[data],
+        CALCULATE (
+            COUNTROWS ( fato_credito ),
+            NOT ISBLANK ( fato_credito[numero_de_operacoes] )
+        )
+    )
+RETURN
+    DIVIDE ( _ComDado, _Total )
+
+Linhas do Fato =
+LASTNONBLANKVALUE ( dim_calendario[data], COUNTROWS ( fato_credito ) )
+
+
+// ---------------------------------------------------------------------
+// 3. TAXAS (razão de saldos da MESMA competência)
+// ---------------------------------------------------------------------
+
+// Numerador e denominador vêm da mesma última competência porque ambas as
+// medidas base já aplicam LASTNONBLANKVALUE. Não use SUM/SUM aqui.
+// Nome com sufixo "(SCR.data)" — ver P2: duas fontes de "inadimplência"
+// convivem no modelo (esta e a série oficial do BCB, seção 5), e sem
+// rótulo de origem a leitura correta parece um erro.
+Taxa de Inadimplência (SCR.data) =
+DIVIDE ( [Carteira Inadimplência], [Carteira Ativa] )
+
+Taxa de Ativo Problemático =
+DIVIDE ( [Ativo Problemático], [Carteira Ativa] )
+
+Taxa de Carteira Vencida =
+DIVIDE ( [Carteira Vencida], [Carteira Ativa] )
+
+
+// ---------------------------------------------------------------------
+// 3.5 ÂNCORA DE COMPETÊNCIA (ADR-011)
+// O relacionamento fato_credito → dim_calendario é OneDirection. Sem esta
+// âncora, MAX(dim_calendario[data]) sem filtro de página retorna o fim do
+// calendário completo (2026-12-31, gerado por date_spine além do fim real
+// dos dados), não o fim real dos dados de crédito (dez/2025). Toda medida
+// que precisa de "período atual" ou "ano anterior" passa por aqui —
+// nunca por MAX(dim_calendario[data]) direto.
+// ---------------------------------------------------------------------
+
+Última Competência com Crédito =
+CALCULATE (
+    MAX ( dim_calendario[data] ),
+    CROSSFILTER ( fato_credito[id_data], dim_calendario[id_data], BOTH ),
+    fato_credito[carteira_ativa] > 0
+)
+
+
+// ---------------------------------------------------------------------
+// 4. COMPARAÇÃO ANO A ANO
+// Não há meta/orçamento nos dados do projeto (dado necessário, mas não
+// disponível). A comparação disponível é temporal — e, para inadimplência,
+// a série oficial do BCB serve de referência externa (bloco 5).
+// ---------------------------------------------------------------------
+
+// AA (ano anterior): NÃO usar SAMEPERIODLASTYEAR direto sobre
+// dim_calendario[data]. Sem filtro de página, o contexto de data é a
+// dim_calendario inteira (vai até 2026-12-31) — o deslocamento de 1 ano
+// cai dentro do mesmo intervalo com dado e devolve o MESMO valor do
+// período atual (encontrado ao validar: Carteira Ativa AA = Carteira
+// Ativa, Δ% a/a = 0%). Corrigido ancorando em
+// [Última Competência com Crédito] e filtrando a data exata 12 meses
+// antes — ver ADR-011.
+Carteira Ativa AA =
+VAR _DataAtual = [Última Competência com Crédito]
+VAR _DataAA = EDATE ( _DataAtual, -12 )
+RETURN
+    CALCULATE (
+        [Carteira Ativa],
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] = _DataAA
+    )
+
+Carteira Ativa Δ% a/a =
+VAR _Ant = [Carteira Ativa AA]
+RETURN
+    DIVIDE ( [Carteira Ativa] - _Ant, _Ant )
+
+Ativo Problemático AA =
+VAR _DataAtual = [Última Competência com Crédito]
+VAR _DataAA = EDATE ( _DataAtual, -12 )
+RETURN
+    CALCULATE (
+        [Ativo Problemático],
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] = _DataAA
+    )
+
+Ativo Problemático Δ% a/a =
+VAR _Ant = [Ativo Problemático AA]
+RETURN
+    DIVIDE ( [Ativo Problemático] - _Ant, _Ant )
+
+Carteira Vencida AA =
+VAR _DataAtual = [Última Competência com Crédito]
+VAR _DataAA = EDATE ( _DataAtual, -12 )
+RETURN
+    CALCULATE (
+        [Carteira Vencida],
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] = _DataAA
+    )
+
+Carteira Vencida Δ% a/a =
+VAR _Ant = [Carteira Vencida AA]
+RETURN
+    DIVIDE ( [Carteira Vencida] - _Ant, _Ant )
+
+// Variação de taxa é em PONTOS PERCENTUAIS, nunca em %.
+// Formatar como número com 2 casas + sufixo " pp".
+Taxa de Inadimplência Δpp a/a =
+VAR _DataAtual = [Última Competência com Crédito]
+VAR _DataAA = EDATE ( _DataAtual, -12 )
+VAR _Ant =
+    CALCULATE (
+        [Taxa de Inadimplência (SCR.data)],
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] = _DataAA
+    )
+RETURN
+    ( [Taxa de Inadimplência (SCR.data)] - _Ant ) * 100
+
+Taxa de Ativo Problemático Δpp a/a =
+VAR _DataAtual = [Última Competência com Crédito]
+VAR _DataAA = EDATE ( _DataAtual, -12 )
+VAR _Ant =
+    CALCULATE (
+        [Taxa de Ativo Problemático],
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] = _DataAA
+    )
+RETURN
+    ( [Taxa de Ativo Problemático] - _Ant ) * 100
+
+// Velocidade relativa: quantas vezes o ativo problemático cresce mais
+// rápido que a carteira. É o número que sustenta a tese da página 1.
+// Validado em dez/2025: 30,98% ÷ 11,30% = 2,74x.
+Velocidade da Deterioração =
+DIVIDE ( [Ativo Problemático Δ% a/a], [Carteira Ativa Δ% a/a] )
+
+// Versões em texto (vírgula forçada) para uso em etiquetas de referência
+// de cartão — essas medidas não tinham FormatString e apareciam como
+// número cru (ex.: "0,31" em vez de "+31,0%"). Mesmo padrão das seções
+// 7-9: SUBSTITUTE sobre FORMAT garante a vírgula independente de locale.
+// P19 (checklist): "todo Δ traz sinal e seta, além da cor" — a seta
+// (▲/▼) fica embutida no texto; a cor (vermelho = piora, verde = melhora)
+// é aplicada via formatação condicional no Power BI Desktop, ligada à
+// medida numérica correspondente (não à versão em texto). Carteira Ativa
+// NUNCA recebe cor (P10: crescimento de carteira é neutro, não é bom
+// nem ruim) — só ganha a seta, sem semântica de cor.
+Carteira Ativa Δ% a/a (Texto) =
+VAR _V = [Carteira Ativa Δ% a/a]
+VAR _Seta = IF ( _V > 0, "▲ ", IF ( _V < 0, "▼ ", "" ) )
+RETURN
+    _Seta & SUBSTITUTE ( FORMAT ( _V, "+0.0%;-0.0%;0.0%" ), ".", "," ) & " em 12 meses"
+
+Ativo Problemático Δ% a/a (Texto) =
+VAR _V = [Ativo Problemático Δ% a/a]
+VAR _Seta = IF ( _V > 0, "▲ ", IF ( _V < 0, "▼ ", "" ) )
+RETURN
+    _Seta & SUBSTITUTE ( FORMAT ( _V, "+0.0%;-0.0%;0.0%" ), ".", "," ) & " em 12 meses"
+
+Taxa de Ativo Problemático (Texto) =
+SUBSTITUTE ( FORMAT ( [Taxa de Ativo Problemático], "0.00%" ), ".", "," )
+
+Inadimplência BCB (Texto) =
+SUBSTITUTE ( FORMAT ( [Inadimplência BCB (SGS 21082)], "0.00%" ), ".", "," )
+
+Taxa de Inadimplência Δpp a/a (Texto) =
+VAR _V = [Taxa de Inadimplência Δpp a/a]
+VAR _Seta = IF ( _V > 0, "▲ ", IF ( _V < 0, "▼ ", "" ) )
+RETURN
+    _Seta & SUBSTITUTE ( FORMAT ( _V, "+0.00;-0.00" ), ".", "," ) & " pp em 12 meses"
+
+
+// ---------------------------------------------------------------------
+// 5. REFERÊNCIA EXTERNA — série oficial do BCB (SGS 21082)
+// Substitui a meta ausente. Duas fontes independentes para "inadimplência"
+// convivem no mesmo modelo: a calculada do SCR.data e a publicada pelo BCB.
+// Sem rótulo explícito na tela, isso destrói a confiança no número.
+// Referência verificada: dez/2025 — SCR 4,10% vs SGS 4,20%.
+// ---------------------------------------------------------------------
+
+Inadimplência BCB (SGS 21082) =
+VAR _UltimaCompetenciaCredito = [Última Competência com Crédito]
+RETURN
+    CALCULATE (
+        AVERAGE ( fato_indicador_macro[valor] ),
+        fato_indicador_macro[nome_serie] = "inadimplencia_total",
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] >= EOMONTH ( _UltimaCompetenciaCredito, -1 ) + 1,
+        dim_calendario[data] <= _UltimaCompetenciaCredito
+    ) / 100
+
+Divergência vs BCB (pp) =
+( [Taxa de Inadimplência (SCR.data)] - [Inadimplência BCB (SGS 21082)] ) * 100
+
+
+// ---------------------------------------------------------------------
+// 6. CONTEXTO E GOVERNANÇA DA LEITURA
+// ---------------------------------------------------------------------
+
+// FORMAT(data,"mmm/yyyy") devolve o nome do mês na locale do CLIENTE
+// (ex.: "Dec/2025"), não da cultura pt-BR do modelo — mesma classe de
+// problema de locale desta sessão, mas nomes de mês não dá pra corrigir
+// com SUBSTITUTE (não é troca de 1 caractere). Usa nome_mes de
+// dim_calendario, que já vem em português, abreviado nas 3 primeiras
+// letras. Validado: "dez/2025".
+Competência Selecionada =
+VAR _D = [Última Competência com Crédito]
+VAR _NomeMes = LOOKUPVALUE ( dim_calendario[nome_mes], dim_calendario[data], _D )
+VAR _Ano = LOOKUPVALUE ( dim_calendario[ano], dim_calendario[data], _D )
+RETURN
+    IF ( ISBLANK ( _D ), "—", LOWER ( LEFT ( _NomeMes, 3 ) ) & "/" & _Ano )
+
+// Alerta de janela: o fato de crédito termina em dez/2025; as séries do
+// SGS avançam até jun/2026 (mensais) e ago/2026 (Selic). Cruzar os dois
+// no mesmo eixo sem declarar a defasagem produz uma queda falsa no fim
+// da série. Esta medida torna a defasagem visível na página.
+// O lado do macro também precisa de CROSSFILTER(BOTH): mesmo problema de
+// relacionamento OneDirection que motivou a seção 3.5.
+Defasagem SCR vs SGS (meses) =
+VAR _UltimoCredito = [Última Competência com Crédito]
+VAR _UltimoMacro =
+    CALCULATE (
+        MAX ( dim_calendario[data] ),
+        CROSSFILTER ( fato_indicador_macro[id_data], dim_calendario[id_data], BOTH ),
+        fato_indicador_macro[granularidade] = "mensal"
+    )
+RETURN
+    DATEDIFF ( _UltimoCredito, _UltimoMacro, MONTH )
+
+// Aviso de qualidade para o período 2015-2016: 5.869 linhas em que
+// carteira_ativa <> carteira_a_vencer + carteira_vencida (99,98% dos
+// casos concentrados nesses dois anos). Exibir junto de qualquer visual
+// que decomponha a carteira nas suas partes.
+Aviso Decomposição 2015-2016 =
+IF (
+    MIN ( dim_calendario[ano] ) <= 2016,
+    "⚠ 2015–2016: a soma das partes pode não fechar com a carteira ativa (ver notas metodológicas).",
+    BLANK ()
+)
+
+
+// ---------------------------------------------------------------------
+// 7. TÍTULOS DINÂMICOS
+// Substituem o headline escrito à mão. O título passa a ser calculado a
+// partir do dado — não pode ficar desatualizado quando a Gold é recarregada.
+//
+// FORMAT() usa PONTO como marcador de casa decimal na sintaxe do format
+// string, sempre — independente do locale. Em teoria o locale do cliente
+// decide qual símbolo é desenhado no lugar desse marcador em tempo de
+// renderização. NA PRÁTICA (validado ao vivo): nem a propriedade Language
+// do banco (testado 1033 → 1046) nem a configuração regional do arquivo
+// no Power BI Desktop mudam esse render numa conexão live/Direct Lake —
+// o resultado sempre veio em estilo en-US ("+11.3%"), porque a locale de
+// avaliação vem da conexão do cliente, fora do nosso controle. Corrigido
+// com SUBSTITUTE(...,".",",") sobre o resultado do FORMAT, forçando a
+// vírgula independente de qualquer negociação de locale (ADR-011).
+// ---------------------------------------------------------------------
+
+Título · Visão Geral =
+VAR _Comp = [Competência Selecionada]
+VAR _DCart = SUBSTITUTE ( FORMAT ( [Carteira Ativa Δ% a/a], "+0.0%;-0.0%;0.0%" ), ".", "," )
+VAR _Vel = [Velocidade da Deterioração]
+VAR _Frase =
+    IF (
+        _Vel > 1.5,
+        "Carteira cresce " & _DCart & ", mas a qualidade piora "
+            & SUBSTITUTE ( FORMAT ( _Vel, "0.0" ), ".", "," ) & "x mais rápido",
+        "Carteira cresce " & _DCart & " com a qualidade estável"
+    )
+RETURN
+    _Frase
+
+// "#.##0" era um typo (ponto = marcador decimal, não milhar) presente
+// desde a criação desta medida — saía "310419.000" em vez de "310.419".
+// Correto é "#,##0" (vírgula = marcador de milhar na sintaxe do format
+// string) — mas aí o símbolo renderiza como vírgula (locale do cliente),
+// não ponto (pt-BR), então precisa do SUBSTITUTE de novo.
+Subtítulo · Fonte e Competência =
+"SCR.data (Banco Central) · competência " & [Competência Selecionada]
+    & " · Direct Lake · " & SUBSTITUTE ( FORMAT ( [Linhas do Fato], "#,##0" ), ",", "." ) & " linhas na competência"
+
+Título · Diagnóstico =
+"Onde a alta de " & SUBSTITUTE ( FORMAT ( [Carteira Vencida Δ% a/a], "+0.0%" ), ".", "," )
+    & " na carteira vencida está concentrada"
+
+
+// ---------------------------------------------------------------------
+// 10. RODAPÉS E CONTEXTOS COMBINADOS DOS KPIs (§10 do dossiê)
+// Cada KPI carrega um "kf" (rodapé, mono 10) além do "kc" (contexto,
+// texto normal) — a auditoria especifica frase por cartão. Alguns "kc"
+// combinam duas medidas numa linha só (ex.: Δ% + peso na carteira).
+// ---------------------------------------------------------------------
+
+Taxa de Inadimplência · Rodapé (BCB) =
+"ref. BCB (SGS 21082): " & [Inadimplência BCB (Texto)]
+
+Carteira Ativa · Rodapé =
+"saldo em " & [Competência Selecionada] & " · " & SUBSTITUTE ( FORMAT ( [Linhas do Fato], "#,##0" ), ",", "." ) & " linhas"
+
+Ativo Problemático · Contexto (Texto) =
+VAR _V = [Ativo Problemático Δ% a/a]
+VAR _Seta = IF ( _V > 0, "▲ ", IF ( _V < 0, "▼ ", "" ) )
+RETURN
+    _Seta & SUBSTITUTE ( FORMAT ( _V, "+0.0%;-0.0%;0.0%" ), ".", "," ) & " · " & [Taxa de Ativo Problemático (Texto)] & " da carteira"
+
+Ativo Problemático · Rodapé =
+"cresce " & SUBSTITUTE ( FORMAT ( [Velocidade da Deterioração], "0.0" ), ".", "," ) & "× mais rápido que a carteira"
+
+Taxa de Inadimplência PF · Contexto (Texto) =
+VAR _V = [Taxa de Inadimplência PF Δpp a/a]
+VAR _Seta = IF ( _V > 0, "▲ ", IF ( _V < 0, "▼ ", "" ) )
+RETURN
+    _Seta & SUBSTITUTE ( FORMAT ( _V, "+0.00;-0.00" ), ".", "," ) & " pp · PJ: "
+        & SUBSTITUTE ( FORMAT ( [Taxa de Inadimplência PJ], "0.00%" ), ".", "," ) & " ("
+        & SUBSTITUTE ( FORMAT ( [Taxa de Inadimplência PJ Δpp a/a], "+0.00;-0.00" ), ".", "," ) & ")"
+
+// "PF = 61% da carteira e 2,1x a taxa de PJ" — a composição (peso do
+// segmento na carteira) é distinta da inadimplência; usa Carteira Ativa
+// filtrada por cliente, não as medidas de taxa.
+Composição PF/PJ · Rodapé =
+VAR _PctPF = DIVIDE ( CALCULATE ( [Carteira Ativa], dim_segmento[cliente] = "PF" ), [Carteira Ativa] )
+VAR _Razao = DIVIDE ( [Taxa de Inadimplência PF], [Taxa de Inadimplência PJ] )
+RETURN
+    "PF = " & SUBSTITUTE ( FORMAT ( _PctPF, "0%" ), ".", "," ) & " da carteira e "
+        & SUBSTITUTE ( FORMAT ( _Razao, "0.0" ), ".", "," ) & "× a taxa de PJ"
+
+
+// ---------------------------------------------------------------------
+// 11. RÓTULO NA PONTA DA SÉRIE — painel duplo (§10/§15 do dossiê:
+// "rótulo direto na ponta de cada série", sem legenda de cor).
+// Não existe toggle nativo "mostrar rótulo só no último ponto" —
+// confirmado por pesquisa, é uma limitação documentada. Técnica nativa
+// usada: a medida devolve o valor (NUMÉRICO — uma série de gráfico de
+// linhas não aceita texto) só na última competência real, BLANK() nas
+// demais; adicionada como uma SEGUNDA série no mesmo eixo Y, com a linha
+// dessa série deixada invisível (transparência 100%) e só o rótulo de
+// dados ligado — o efeito visual é um rótulo "solto" na ponta da linha
+// principal, sem alterar a série de verdade.
+// Cuidado: [Última Competência com Crédito] avaliada dentro do contexto
+// de um ponto do gráfico herdaria o filtro de data DESSE ponto — por
+// isso precisa de REMOVEFILTERS(dim_calendario) antes de comparar,
+// senão a condição fica verdadeira em todo ponto, não só no último.
+// ---------------------------------------------------------------------
+
+Carteira Ativa · Rótulo Ponta =
+VAR _D = MAX ( dim_calendario[data] )
+VAR _UltimaGlobal = CALCULATE ( [Última Competência com Crédito], REMOVEFILTERS ( dim_calendario ) )
+RETURN
+    IF ( _D = _UltimaGlobal, [Carteira Ativa] )
+// FormatString: "R$"0.00 — sem escala/sufixo "Tri" aqui: a "Unidades de
+// exibição" (Trilhões) do rótulo de dados no Power BI Desktop já faz a
+// escala e adiciona "Tri" sozinha. Colocar os dois juntos duplicava o
+// sufixo ("R$ 7,44 TriTri").
+
+Taxa de Inadimplência · Rótulo Ponta =
+VAR _D = MAX ( dim_calendario[data] )
+VAR _UltimaGlobal = CALCULATE ( [Última Competência com Crédito], REMOVEFILTERS ( dim_calendario ) )
+RETURN
+    IF ( _D = _UltimaGlobal, [Taxa de Inadimplência (SCR.data)] )
+
+
+// ---------------------------------------------------------------------
+// 12. RODAPÉ DE PROCEDÊNCIA — presente em todas as páginas (§19)
+// ---------------------------------------------------------------------
+
+Rodapé · Procedência da Página =
+"Fonte: SCR.data (Banco Central) · Processamento: dbt + Direct Lake · Última competência: " & [Competência Selecionada]
+    & " · Definições de medida: ver Notas Metodológicas"
+
+
+// ---------------------------------------------------------------------
+// 13. DUMBBELL POR MODALIDADE — página 1 (Deneb)
+// Dataset: uma linha por modalidade, com a taxa em dez/2024 e dez/2025.
+// Mesmo corte de materialidade (>= 1% da carteira total) da medida de
+// Insight (seção 9) — sem ele, "Adiantamentos a depositantes" (carteira
+// de R$ 1,76) entraria no gráfico com uma barra enorme sem significado.
+// ---------------------------------------------------------------------
+
+Taxa de Inadimplência (dez/2024) =
+CALCULATE (
+    [Taxa de Inadimplência (SCR.data)],
+    REMOVEFILTERS ( dim_calendario ),
+    dim_calendario[data] = DATE ( 2024, 12, 31 )
+)
+
+Taxa de Inadimplência (dez/2025) =
+CALCULATE (
+    [Taxa de Inadimplência (SCR.data)],
+    REMOVEFILTERS ( dim_calendario ),
+    dim_calendario[data] = DATE ( 2025, 12, 31 )
+)
+
+Dumbbell · Δpp Modalidade =
+( [Taxa de Inadimplência (dez/2025)] - [Taxa de Inadimplência (dez/2024)] ) * 100
+
+// ---------------------------------------------------------------------
+// 13b. RECONCILIAÇÃO SCR × SGS — Página 5 (Notas Metodológicas)
+// Calculada ao vivo (não copiada do docs/data-dictionary.md) — achado ao
+// validar: mar/2025 recalculado dá SCR = R$ 6.781.116 mi, ~R$ 9.589 mi
+// abaixo do valor estático registrado no dicionário (R$ 6.790.705 mi).
+// Mesma família do P7 (divergência de 69 linhas local vs Fabric). Não
+// investigado a fundo — registrado como nota na página, não escondido.
+// ---------------------------------------------------------------------
+
+Saldo Crédito BCB (SGS 20539) =
+VAR _UltimaCompetenciaCredito = [Última Competência com Crédito]
+RETURN
+    CALCULATE (
+        AVERAGE ( fato_indicador_macro[valor] ),
+        fato_indicador_macro[nome_serie] = "saldo_credito_total",
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] >= EOMONTH ( _UltimaCompetenciaCredito, -1 ) + 1,
+        dim_calendario[data] <= _UltimaCompetenciaCredito
+    )
+
+Divergência SCR vs SGS (Saldo) % =
+DIVIDE ( DIVIDE ( [Carteira Ativa], 1000000 ) - [Saldo Crédito BCB (SGS 20539)], [Saldo Crédito BCB (SGS 20539)] ) * 100
+
+// Medidas de exibição pra tabela de reconciliação (arredondadas/formatadas)
+SCR (R$ mi) =
+ROUND ( DIVIDE ( [Carteira Ativa], 1000000 ), 0 )
+
+SGS (R$ mi) =
+ROUND ( [Saldo Crédito BCB (SGS 20539)], 0 )
+
+Diferença % (Texto) =
+SUBSTITUTE ( FORMAT ( [Divergência SCR vs SGS (Saldo) %], "+0.00;-0.00" ), ".", "," ) & "%"
+
+Dumbbell · Elegivel (Materialidade) =
+VAR _TotalCarteira =
+    CALCULATE (
+        [Carteira Ativa],
+        REMOVEFILTERS ( dim_calendario ),
+        REMOVEFILTERS ( dim_modalidade ),
+        dim_calendario[data] = DATE ( 2025, 12, 31 )
+    )
+VAR _CarteiraModalidade =
+    CALCULATE ( [Carteira Ativa], REMOVEFILTERS ( dim_calendario ), dim_calendario[data] = DATE ( 2025, 12, 31 ) )
+RETURN
+    _CarteiraModalidade >= _TotalCarteira * 0.01
+
+
+// ---------------------------------------------------------------------
+// 8. RECORTE PF/PJ — KPI em destaque da página 1
+// P11 do dossiê: o destaque vai para o indicador que abre o diagnóstico
+// (inadimplência PF), não para o saldo total. Validado dez/2025: PF 5,15%
+// (+1,49 pp a/a) vs PJ 2,49% (+0,52 pp a/a) — a deterioração está
+// concentrada em pessoa física.
+// ---------------------------------------------------------------------
+
+Taxa de Inadimplência PF =
+CALCULATE ( [Taxa de Inadimplência (SCR.data)], dim_segmento[cliente] = "PF" )
+
+Taxa de Inadimplência PF Δpp a/a =
+CALCULATE ( [Taxa de Inadimplência Δpp a/a], dim_segmento[cliente] = "PF" )
+
+Taxa de Inadimplência PJ =
+CALCULATE ( [Taxa de Inadimplência (SCR.data)], dim_segmento[cliente] = "PJ" )
+
+Taxa de Inadimplência PJ Δpp a/a =
+CALCULATE ( [Taxa de Inadimplência Δpp a/a], dim_segmento[cliente] = "PJ" )
+
+// Versão em texto, com vírgula forçada: o cartão de KPI em destaque
+// renderizava [Taxa de Inadimplência PF] com ponto (estilo en-US) mesmo
+// com FormatString "0.00%" idêntico ao de [Taxa de Inadimplência
+// (SCR.data)], que funciona certo — causa não identificada, contornada
+// forçando o texto igual foi feito nos títulos (seção 7).
+Taxa de Inadimplência PF (Texto) =
+SUBSTITUTE ( FORMAT ( [Taxa de Inadimplência PF], "0.00%" ), ".", "," )
+
+// Linha de contexto do KPI em destaque: mostra o valor PJ ao lado do PF
+// para comparar os dois perfis de cliente no mesmo cartão.
+KPI · Contexto PJ (Inadimplência) =
+"PJ: " & SUBSTITUTE ( FORMAT ( [Taxa de Inadimplência PJ], "0.0%" ), ".", "," )
+    & " · " & SUBSTITUTE ( FORMAT ( [Taxa de Inadimplência PJ Δpp a/a], "+0.0;-0.0" ), ".", "," ) & " pp"
+
+
+// ---------------------------------------------------------------------
+// 9. CAIXA DE INSIGHT — página 1
+// Substitui o texto escrito à mão do mock ("...crédito rural (+3,15 pp)
+// e em pessoa física..."). Elege a modalidade de maior Δpp a/a, mas SÓ
+// entre modalidades com carteira >= 1% do total: sem esse corte de
+// materialidade, o ranking elege modalidades com carteira quase zero
+// (ex.: "Adiantamentos a depositantes", carteira de R$ 1,76, Δpp de
+// +7,9 pp) cuja variação percentual é ruído, não sinal — achado ao
+// validar esta medida, não previsto no dossiê original.
+// ---------------------------------------------------------------------
+
+Insight · Concentração da Deterioração =
+VAR _TotalCarteira = [Carteira Ativa]
+VAR _Ranking =
+    ADDCOLUMNS (
+        FILTER (
+            VALUES ( dim_modalidade[modalidade] ),
+            [Carteira Ativa] >= _TotalCarteira * 0.01
+        ),
+        "@Delta", [Taxa de Inadimplência Δpp a/a]
+    )
+VAR _TopRow = TOPN ( 1, _Ranking, [@Delta], DESC )
+VAR _TopModalidade = TRIM ( MAXX ( _TopRow, dim_modalidade[modalidade] ) )
+VAR _TopDelta = MAXX ( _TopRow, [@Delta] )
+RETURN
+    "A deterioração está concentrada em " & _TopModalidade & " (" & FORMAT ( _TopDelta, "+0.0" ) & " pp) e em pessoa física ("
+        & FORMAT ( [Taxa de Inadimplência PF Δpp a/a], "+0.0" ) & " pp vs "
+        & FORMAT ( [Taxa de Inadimplência PJ Δpp a/a], "+0.0" ) & " pp em PJ)."

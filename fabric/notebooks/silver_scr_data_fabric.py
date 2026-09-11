@@ -1,0 +1,65 @@
+spark.sql("CREATE SCHEMA IF NOT EXISTS silver")
+
+print("Processando silver.credito_uf_modalidade (pode levar alguns minutos)...")
+
+spark.sql("""
+    CREATE OR REPLACE TABLE silver.credito_uf_modalidade AS
+    WITH dados_mais_recentes AS (
+        SELECT
+            CAST(data_base AS DATE) AS data_base,
+            uf,
+            segmento,
+            cliente,
+            cnae_ocupacao,
+            porte,
+            modalidade,
+            submodalidade,
+            origem,
+            indexador,
+            NULLIF(numero_de_operacoes, -1) AS numero_de_operacoes,
+            a_vencer_ate_90_dias,
+            a_vencer_de_91_ate_360_dias,
+            a_vencer_de_361_ate_1080_dias,
+            a_vencer_de_1081_ate_1800_dias,
+            a_vencer_de_1801_ate_5400_dias,
+            a_vencer_acima_de_5400_dias,
+            vencido_de_15_ate_90_dias,
+            vencido_acima_de_90_dias,
+            carteira_a_vencer,
+            carteira_vencida,
+            carteira_ativa,
+            carteira_inadimplencia,
+            ativo_problematico,
+            ano_arquivo,
+            arquivo_origem,
+            timestamp_coleta,
+            ROW_NUMBER() OVER (
+                PARTITION BY
+                    data_base, uf, segmento, cliente, cnae_ocupacao,
+                    porte, modalidade, submodalidade, origem, indexador
+                ORDER BY timestamp_coleta DESC
+            ) AS numero_linha
+        FROM bronze.scr_data_raw
+    )
+    SELECT
+        data_base, uf, segmento, cliente, cnae_ocupacao, porte, modalidade,
+        submodalidade, origem, indexador, numero_de_operacoes,
+        a_vencer_ate_90_dias, a_vencer_de_91_ate_360_dias,
+        a_vencer_de_361_ate_1080_dias, a_vencer_de_1081_ate_1800_dias,
+        a_vencer_de_1801_ate_5400_dias, a_vencer_acima_de_5400_dias,
+        vencido_de_15_ate_90_dias, vencido_acima_de_90_dias,
+        carteira_a_vencer, carteira_vencida, carteira_ativa,
+        carteira_inadimplencia, ativo_problematico, ano_arquivo,
+        arquivo_origem,
+        timestamp_coleta AS timestamp_ultima_coleta
+    FROM dados_mais_recentes
+    WHERE numero_linha = 1
+""")
+
+total = spark.sql("SELECT COUNT(*) AS total FROM silver.credito_uf_modalidade").collect()[0]["total"]
+print(f"Total de linhas em silver.credito_uf_modalidade: {total}")
+
+nulos_operacoes = spark.sql(
+    "SELECT COUNT(*) AS total FROM silver.credito_uf_modalidade WHERE numero_de_operacoes IS NULL"
+).collect()[0]["total"]
+print(f"Linhas com numero_de_operacoes NULL (antes era -1): {nulos_operacoes}")

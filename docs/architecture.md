@@ -2,9 +2,10 @@
 
 ## Visão geral
 
-O Lumen segue uma arquitetura medallion (Bronze → Silver → Gold), com
-execução local via DuckDB nas Sprints 1-5, migrando para Microsoft Fabric
-a partir da Sprint 6 (ver ADR-001).
+O Lumen segue uma arquitetura medallion (Bronze → Silver → Gold). Rodou
+localmente via DuckDB nas Sprints 1-5, e migrou para o Microsoft Fabric na
+Sprint 6 (ver ADR-001 e ADR-008), onde roda hoje. O target DuckDB local
+permanece disponível para desenvolvimento e CI (`dbt --target dev`).
 
 ## Fluxo de dados
 
@@ -12,9 +13,9 @@ Fontes externas Bronze Silver Gold
 ───────────────── ────── ────── ────
 API SGS (BCB) ──▶ sgs_series_raw ──▶ indicador_macro ─┐
 ──▶ serie_credito_mensal ─┤
-SCR.data ZIP (BCB) ──▶ scr_data_raw ──▶ credito_uf_modalidade ─┤──▶ star schema (dbt)
-API IBGE ──▶ ibge_*_raw ──▶ localidade, │ 4 dimensões + 2 fatos
-populacao_uf ─┘
+SCR.data ZIP (BCB) ──▶ scr_data_raw ──▶ credito_uf_modalidade ─┤──▶ star schema (dbt) ──▶ modelo semântico
+API IBGE ──▶ ibge_*_raw ──▶ localidade, │ 4 dimensões + 2 fatos    (Direct Lake,
+populacao_uf ─┘                          lumen_semantico)
 
 ## Princípios arquiteturais
 
@@ -30,13 +31,18 @@ populacao_uf ─┘
 
 ## Stack técnica
 
-| Camada | Tecnologia (atual) | Tecnologia (Sprint 6+) |
+| Camada | Tecnologia (produção, desde Sprint 6) | Tecnologia (dev/CI local) |
 |---|---|---|
-| Armazenamento | DuckDB (arquivo local) | Microsoft Fabric (Lakehouse) |
-| Transformação | Python + SQL | dbt (mantido) |
-| Orquestração | Execução manual | Fabric Data Pipelines |
-| Modelo semântico | — | Power BI / Direct Lake |
-| CI/CD | GitHub Actions | GitHub Actions (mantido) |
+| Armazenamento | Microsoft Fabric (Lakehouse, schemas habilitados) | DuckDB (arquivo local) |
+| Ingestão/transformação | Notebooks PySpark (`fabric/notebooks/`) | Scripts Python (`ingestion/`, `transform/silver/`) |
+| Gold | dbt via `dbt-fabricspark` (`--target fabric`) | dbt via `dbt-duckdb` (`--target dev`) |
+| Modelo semântico | Power BI / Direct Lake (`lumen_semantico`) | — |
+| Orquestração | Execução manual dos notebooks (pipelines Fabric ainda não adotados) | Execução manual |
+| CI/CD | GitHub Actions (roda contra DuckDB sintético) | GitHub Actions |
+
+Autenticação do dbt contra o Fabric usa Service Principal (não CLI
+interativo) — ver ADR-008 para o motivo (Conditional Access bloqueava
+login interativo do Azure CLI neste tenant).
 
 ## Qualidade de dados
 

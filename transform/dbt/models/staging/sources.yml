@@ -1,0 +1,47 @@
+version: 2
+
+sources:
+  - name: silver
+    description: >
+      Camada Silver do Lumen — tabelas limpas, tipadas e deduplicadas,
+      construídas pelos scripts em transform/silver/. Esta é a fronteira
+      entre o mundo dbt e o mundo externo: nada antes daqui é gerenciado
+      pelo dbt.
+    schema: silver
+    tables:
+      - name: indicador_macro
+        description: >
+          Indicadores macroeconômicos nacionais (Selic, IPCA), com
+          granularidade mista (diária e mensal — ver coluna granularidade).
+        loaded_at_field: cast(timestamp_ultima_coleta as timestamp)
+        freshness:
+          warn_after: {count: 7, period: day}
+          error_after: {count: 30, period: day}
+
+      - name: serie_credito_mensal
+        description: >
+          Indicadores nacionais do mercado de crédito (saldo, concessões,
+          inadimplência, spread, endividamento), todos mensais.
+        loaded_at_field: cast(timestamp_ultima_coleta as timestamp)
+        freshness:
+          warn_after: {count: 7, period: day}
+          error_after: {count: 30, period: day}
+
+      - name: credito_uf_modalidade
+        description: >
+          Operações de crédito por UF, modalidade e segmento (SCR.data),
+          na granularidade original da fonte. ~34,4M linhas.
+        loaded_at_field: cast(timestamp_ultima_coleta as timestamp)
+        freshness:
+          warn_after: {count: 45, period: day}
+          error_after: {count: 90, period: day}
+
+      - name: localidade
+        description: Cadastro das 27 UFs brasileiras (IBGE).
+        loaded_at_field: cast(timestamp_ultima_coleta as timestamp)
+
+      - name: populacao_uf
+        description: >
+          População estimada por UF e ano (IBGE). Anos de 2022 e 2023
+          ausentes — ver observação de qualidade no dicionário de dados.
+        loaded_at_field: cast(timestamp_ultima_coleta as timestamp)

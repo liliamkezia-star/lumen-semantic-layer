@@ -2,58 +2,132 @@ version: 2
 
 models:
   - name: dim_calendario
-    description: Dimensão de calendário, gerada dia a dia de 2015 a 2026.
+    description: >
+      Dimensão de calendário, gerada dia a dia de 2015-01-01 a 2026-12-31.
+      Não deriva de nenhuma fonte externa — é construída por generate_series.
+      Deve ser marcada como Tabela de Data no modelo semântico (Sprint 6).
     columns:
       - name: id_data
-        description: Chave substituta no formato YYYYMMDD.
+        description: >
+          Chave substituta no formato numérico YYYYMMDD (ex: 20240131).
+          Simultaneamente legível e eficiente para join.
         tests:
           - unique
           - not_null
+      - name: data
+        description: Data de referência, tipo DATE (sem componente de hora).
+      - name: ano
+        description: Ano da data (número inteiro, ex 2024).
+      - name: mes
+        description: Mês da data (1 a 12).
+      - name: trimestre
+        description: Trimestre da data (1 a 4).
+      - name: dia
+        description: Dia do mês (1 a 31).
+      - name: nome_mes
+        description: Nome do mês por extenso, em português (ex Janeiro).
+      - name: ano_mes
+        description: Competência no formato AAAA-MM, útil para agrupamentos.
+      - name: trimestre_label
+        description: Rótulo do trimestre (T1 a T4), para exibição.
 
   - name: dim_uf
-    description: Dimensão de UFs brasileiras (27 estados + DF).
+    description: >
+      Dimensão de unidades federativas brasileiras (26 estados + Distrito
+      Federal), derivada da API de Localidades do IBGE.
     columns:
       - name: id_uf
-        description: Chave substituta, código oficial do IBGE.
+        description: >
+          Chave substituta — código oficial do IBGE para a UF (ex 25 = Paraíba).
+          Não é gerada pelo projeto, vem da fonte.
         tests:
           - unique
           - not_null
       - name: sigla_uf
+        description: Sigla de duas letras da UF (ex PB). Compatível com o SCR.data.
         tests:
           - unique
           - not_null
+      - name: nome_uf
+        description: Nome da UF por extenso (ex Paraíba).
+      - name: id_regiao
+        description: Código IBGE da região geográfica (1 Norte a 5 Centro-Oeste).
+      - name: nome_regiao
+        description: Nome da região geográfica (ex Nordeste).
 
   - name: dim_modalidade
-    description: Combinações únicas de modalidade, submodalidade, origem e indexador de crédito.
+    description: >
+      Combinações únicas de modalidade, submodalidade, origem e indexador
+      de crédito, extraídas do próprio SCR.data. 491 combinações.
     columns:
       - name: id_modalidade
         description: >
-          Chave substituta gerada por hash MD5 da chave natural
-          (modalidade + submodalidade + origem + indexador). Estável entre
-          execuções: a mesma combinação sempre produz o mesmo ID, mesmo
-          com a dimensão sendo reconstruída integralmente a cada dbt run.
+          Chave substituta UBIGINT, gerada pela macro gerar_chave_substituta
+          (hash da chave natural). Estável entre execuções: a mesma
+          combinação sempre produz o mesmo ID, mesmo com a dimensão sendo
+          reconstruída integralmente a cada dbt run.
         tests:
           - unique
           - not_null
+      - name: modalidade
+        description: >
+          Modalidade de crédito no nível mais agregado (ex Empréstimos,
+          Financiamentos, Operações de arrendamento).
+      - name: submodalidade
+        description: >
+          Detalhamento da modalidade (ex Cartão de crédito rotativo,
+          Crédito consignado, Financiamento de veículos).
+      - name: origem
+        description: >
+          Destinação dos recursos - com ou sem destinação específica.
+          Distingue crédito livre de crédito direcionado.
+      - name: indexador
+        description: >
+          Forma de correção da operação (Prefixado, Pós-fixado, Flutuantes,
+          Índices de preços, Outros indexadores).
 
   - name: dim_segmento
-    description: Combinações únicas de segmento, tipo de cliente, CNAE e porte.
+    description: >
+      Combinações únicas de segmento da instituição, tipo de cliente, setor
+      econômico e porte, extraídas do próprio SCR.data. 1.372 combinações.
     columns:
       - name: id_segmento
         description: >
-          Chave substituta gerada por hash MD5 da chave natural
-          (segmento + cliente + cnae_ocupacao + porte). Estável entre
-          execuções, pelo mesmo motivo de dim_modalidade.
+          Chave substituta UBIGINT, gerada pela macro gerar_chave_substituta.
+          Mesma estratégia e garantias de dim_modalidade.
         tests:
           - unique
           - not_null
+      - name: segmento
+        description: >
+          Segmento da instituição financeira que concedeu o crédito
+          (ex Livre, Direcionado, Arrendamento).
+      - name: cliente
+        description: Tipo de tomador - PF (pessoa física) ou PJ (pessoa jurídica).
+      - name: cnae_ocupacao
+        description: >
+          Setor econômico (CNAE) para PJ, ou ocupação para PF. Campo de
+          alta cardinalidade.
+      - name: porte
+        description: >
+          Porte do tomador (ex Micro, Pequeno, Médio, Grande). Aplicável
+          principalmente a PJ.
 
   - name: fato_credito
     description: >
       Fato de operações de crédito por UF, modalidade e segmento, na
-      granularidade original da fonte SCR.data (ver ADR-004).
+      granularidade original da fonte SCR.data (ver ADR-004 - nenhuma
+      agregação é aplicada). Grão - uma linha por competência x UF x
+      modalidade x segmento. Volume aproximado de 34,4 milhões de linhas.
+
+      ATENÇÃO - semiaditividade. As métricas de carteira são saldos em uma
+      data de referência. Podem ser somadas entre UF, modalidade e segmento
+      dentro da mesma competência, mas NÃO devem ser somadas ao longo do
+      tempo (somar o saldo de janeiro com o de fevereiro não representa
+      nada válido). Apenas numero_de_operacoes é plenamente aditiva.
     columns:
       - name: id_data
+        description: FK para dim_calendario, no formato YYYYMMDD.
         tests:
           - not_null
           - relationships:
@@ -61,6 +135,7 @@ models:
                 to: ref('dim_calendario')
                 field: id_data
       - name: id_uf
+        description: FK para dim_uf, código IBGE da unidade federativa.
         tests:
           - not_null
           - relationships:
@@ -68,6 +143,7 @@ models:
                 to: ref('dim_uf')
                 field: id_uf
       - name: id_modalidade
+        description: FK para dim_modalidade.
         tests:
           - not_null
           - relationships:
@@ -75,20 +151,77 @@ models:
                 to: ref('dim_modalidade')
                 field: id_modalidade
       - name: id_segmento
+        description: FK para dim_segmento.
         tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('dim_segmento')
                 field: id_segmento
+      - name: numero_de_operacoes
+        description: >
+          Quantidade de operações de crédito no recorte. ADITIVA - pode ser
+          somada em qualquer dimensão, inclusive tempo. NULL quando a fonte
+          publicou o valor sentinela -1 (27,76% das linhas) - causa não
+          documentada oficialmente, ver dicionário de dados.
+      - name: carteira_a_vencer
+        description: >
+          Saldo em reais das parcelas ainda não vencidas. SEMIADITIVA -
+          não somar ao longo do tempo.
+      - name: carteira_vencida
+        description: >
+          Saldo em reais das parcelas já vencidas e não pagas.
+          SEMIADITIVA - não somar ao longo do tempo.
+      - name: carteira_ativa
+        description: >
+          Saldo total em reais da carteira de crédito. Estruturalmente
+          igual a carteira_a_vencer + carteira_vencida (exceto em 5.869
+          linhas de 2015-2016, ver observação de qualidade no dicionário).
+          SEMIADITIVA - não somar ao longo do tempo.
+      - name: carteira_inadimplencia
+        description: >
+          Saldo em reais classificado como inadimplente. Base para o KPI
+          de inadimplência. SEMIADITIVA - não somar ao longo do tempo.
+      - name: ativo_problematico
+        description: >
+          Saldo em reais classificado como ativo problemático, conceito
+          mais amplo que inadimplência (inclui reestruturações e operações
+          com indícios de deterioração). SEMIADITIVA.
 
   - name: fato_indicador_macro
-    description: Fato de indicadores macroeconômicos e de crédito nacional (SGS).
+    description: >
+      Fato de indicadores macroeconômicos e de crédito nacional, unindo as
+      séries do SGS (Banco Central). Volume aproximado de 7.270 linhas,
+      crescendo a cada coleta.
+
+      ATENÇÃO - granularidade mista. Contém séries diárias (Selic) e
+      mensais (IPCA, saldo de crédito). Ver a coluna granularidade antes
+      de agregar ou comparar séries entre si.
     columns:
       - name: id_data
+        description: FK para dim_calendario, no formato YYYYMMDD.
         tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('dim_calendario')
                 field: id_data
+      - name: nome_serie
+        description: >
+          Identificador legível da série (ex selic_meta, ipca_mensal,
+          inadimplencia_total).
+      - name: codigo_serie
+        description: Código oficial da série no SGS do Banco Central.
+      - name: valor
+        description: >
+          Valor da observação. A unidade varia por série - SEMPRE consultar
+          unidade_valor antes de comparar ou agregar séries diferentes.
+      - name: unidade_valor
+        description: >
+          Unidade explícita do valor (ex pct ao ano, pct ao dia, BRL
+          milhoes). Existe para eliminar ambiguidade - a Selic diária e a
+          Selic meta têm escalas completamente distintas.
+      - name: granularidade
+        description: >
+          Periodicidade da série (diaria ou mensal). Torna explícito que
+          esta tabela mistura grãos temporais.

@@ -1,7 +1,8 @@
 # Lumen — Camada Semântica "AI-Ready" + Agente Analítico Governado
 
-> 🚧 Projeto em desenvolvimento. Sprints 1-5 concluídas (fase de engenharia
-> de dados). Sprint 6 (modelo semântico) em andamento.
+> 🚧 Projeto em desenvolvimento. Sprints 1-6 concluídas (engenharia de
+> dados, migração para Microsoft Fabric e modelo semântico). Sprint 7
+> (dashboard Power BI) em andamento.
 
 ## Visão
 
@@ -13,19 +14,26 @@ métricas certificadas — sem gerar SQL/DAX livre.
 
 ## Status atual
 
-- **Concluído:** Sprints 1-5 — ingestão, camada Silver e star schema (Gold)
-- **Em andamento:** Sprint 6 — modelo semântico e migração para Microsoft Fabric
-- **Última atualização:** agosto de 2026
+- **Concluído:** Sprints 1-5 (ingestão, Silver, star schema Gold) e Sprint 6
+  (migração para Microsoft Fabric + modelo semântico Direct Lake)
+- **Em andamento:** Sprint 7 — dashboard Power BI, a partir de uma auditoria
+  externa de design (`ADR-010` a `ADR-012`). Página 1 (Visão Geral) e
+  Página 5 (Notas Metodológicas) concluídas; Página 2 (Onde) em construção;
+  Páginas 3 e 4 não iniciadas.
+- **Última atualização:** setembro de 2026
 
 ### O que já existe
 
 | Camada | Conteúdo |
 |---|---|
-| Bronze | 3 fontes ingeridas, append-only, com validação de schema e retry |
-| Silver | 5 tabelas limpas, tipadas e deduplicadas |
-| Gold | Star schema com 4 dimensões e 2 fatos (~34,4M linhas no fato principal) |
+| Bronze | 3 fontes ingeridas, append-only, com validação de schema e retry — rodando no Fabric (Lakehouse) |
+| Silver | 5 tabelas limpas, tipadas e deduplicadas — rodando no Fabric |
+| Gold | Star schema com 4 dimensões e 2 fatos (~34,4M linhas no fato principal) — dbt rodando sobre o Fabric via `dbt-fabricspark` |
+| Modelo semântico | `lumen_semantico`, Direct Lake, catálogo de medidas certificadas versionado em `powerbi/medidas_certificadas_v2.dax`, publicado no workspace `lumen-dev` |
+| Dashboard | Power BI sobre o modelo semântico — tema (`powerbi/lumen_theme_v2.json`), visuais Deneb versionados em `powerbi/deneb/` |
 
-**Qualidade:** 20 testes pytest + 21 testes dbt, todos rodando no CI a cada PR.
+**Qualidade:** 20 testes pytest + 23 testes dbt, todos passando tanto no
+target local (DuckDB) quanto no Fabric.
 
 **Validação:** reconciliação do total agregado do SCR.data com a série
 oficial do BCB realizada — convergência com divergência metodológica
@@ -33,8 +41,11 @@ documentada (ver `docs/data-dictionary.md`).
 
 ## Stack atual
 
-Python, DuckDB, dbt, GitHub Actions. Microsoft Fabric e Power BI serão
-incorporados a partir da Sprint 6 (ver ADR-001 para o plano de migração).
+Python, dbt, GitHub Actions, Microsoft Fabric (Lakehouse + Direct Lake),
+Power BI (Direct Lake + tema customizado) e Deneb/Vega-Lite para o único
+visual não-nativo do dashboard. Execução local com DuckDB permanece
+disponível como target de desenvolvimento/CI (ver ADR-001 e ADR-008 para
+o histórico da migração).
 
 ## Decisões técnicas (ADRs)
 
@@ -51,15 +62,34 @@ predefinida.
 - **ADR-004**: Correção arquitetural — camada Silver mantém granularidade
   total da fonte; agregação fica para a Gold
 - **ADR-005**: Adoção incremental de type hints a partir da Sprint 6
+- **ADR-006**: Manutenção de DOUBLE (não DECIMAL) para colunas monetárias
+- **ADR-007**: Materialização full-refresh na fase local, incremental avaliada na Sprint 6
+- **ADR-008**: Migração para Microsoft Fabric concluída — SPN em vez de CLI, capacity de trial, `dim_calendario` portável
+- **ADR-009**: Modelo semântico Direct Lake publicado sobre a Gold do Fabric
+- **ADR-010**: Correção das medidas certificadas de `SUM()` para
+  `LASTNONBLANKVALUE` — as medidas de saldo são semiaditivas e não podem
+  somar competências no tempo
+- **ADR-011**: Correção dos comparativos ano a ano (`SAMEPERIODLASTYEAR`
+  sem âncora herdava o fim do calendário gerado, não o fim real dos dados)
+  e do separador decimal em medidas de texto
+- **ADR-012**: Investigação parcial de uma divergência entre o modelo
+  publicado no Fabric e o `lumen.duckdb` local para uma competência
+  específica — causa raiz não totalmente confirmada, registrada com
+  honestidade em vez de escondida
 
 ## Estrutura do projeto
 
 common/ → utilitários compartilhados (logging estruturado)
-ingestion/ → scripts de ingestão (Bronze) e contratos de dados
-transform/silver/ → scripts de transformação (Silver)
-transform/dbt/ → projeto dbt (staging + star schema Gold)
+ingestion/ → scripts de ingestão (Bronze) local, versão DuckDB
+transform/silver/ → scripts de transformação (Silver) local, versão DuckDB
+transform/dbt/ → projeto dbt (staging + star schema Gold) — roda contra
+  DuckDB local (`--target dev`) ou Fabric (`--target fabric`)
+fabric/notebooks/ → notebooks PySpark (Bronze + Silver) para rodar no
+  Fabric — equivalentes aos scripts de ingestion/ e transform/silver/
 tests/ → testes de qualidade (pytest) e utilitários de CI
 docs/ → dicionário de dados, ADRs, arquitetura
+powerbi/ → catálogo de medidas DAX, tema do relatório e specs Deneb
+  (Vega-Lite) do dashboard da Sprint 7
 
 ## Fontes de dados
 

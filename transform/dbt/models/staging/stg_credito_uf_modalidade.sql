@@ -9,7 +9,12 @@ select
     submodalidade,
     origem,
     indexador,
-    numero_de_operacoes,
+    -- CAST explícito para BIGINT: a coluna chega como INT32 desde a
+    -- ingestão (Bronze), o que faz SUM() estourar ao agregar sobre os
+    -- 34,4M linhas do fato (achado ao publicar o modelo semântico —
+    -- ver ADR-009). BIGINT evita o overflow sem precisar reprocessar
+    -- Bronze/Silver.
+    CAST(numero_de_operacoes AS BIGINT) AS numero_de_operacoes,
     a_vencer_ate_90_dias,
     a_vencer_de_91_ate_360_dias,
     a_vencer_de_361_ate_1080_dias,
@@ -26,4 +31,4 @@ select
     ano_arquivo,
     arquivo_origem,
     timestamp_ultima_coleta
-from silver.credito_uf_modalidade
+from {{ source('silver', 'credito_uf_modalidade') }}

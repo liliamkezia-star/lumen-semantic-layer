@@ -6,4 +6,4 @@ select
     unidade_valor,
     granularidade,
     timestamp_ultima_coleta
-from silver.serie_credito_mensal
+from {{ source('silver', 'serie_credito_mensal') }}

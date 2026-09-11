@@ -22,3 +22,7 @@ ignore = [
 # Blocos SQL longos em strings: quebrar as linhas prejudicaria a leitura.
 "tests/criar_banco_ci.py" = ["E501"]
 "tests/reconciliar_totais.py" = ["E501"]
+# Notebooks do Fabric: `spark` e `notebookutils` são injetados pelo runtime
+# do Fabric/Synapse em tempo de execução, não importados no código — o
+# ruff não tem como saber disso rodando fora do Fabric.
+"fabric/notebooks/*" = ["F821"]

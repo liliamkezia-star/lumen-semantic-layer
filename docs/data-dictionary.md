@@ -169,11 +169,15 @@ dia, nome_mes, ano_mes, trimestre_label
 Combinações únicas de modalidade/submodalidade/origem/indexador de
 crédito, extraídas de stg_credito_uf_modalidade.
 
-**Colunas:** id_modalidade (PK, hash MD5 da chave natural), modalidade,
-submodalidade, origem, indexador
+**Colunas:** id_modalidade (PK, UBIGINT — hash da chave natural),
+modalidade, submodalidade, origem, indexador
 
-**Nota sobre a chave substituta:** o ID é gerado por hash MD5 da
-concatenação das 4 colunas naturais, não por numeração sequencial.
+**Nota sobre a chave substituta:** o ID é gerado pela função `hash()` do
+DuckDB (UBIGINT, 64 bits) sobre a concatenação das 4 colunas naturais,
+não por numeração sequencial. Chave inteira (em vez de string) reduz o
+custo de dicionarização e de comparação em VertiPaq/Direct Lake e em
+joins SQL — relevante para o modelo semântico da Sprint 6, construído
+sobre um fato de 34,4M linhas.
 Numeração sequencial seria instável — como a dimensão é reconstruída
 integralmente a cada execução do dbt, uma nova combinação inserida no
 meio da ordenação deslocaria os IDs de todas as seguintes, quebrando
@@ -183,7 +187,7 @@ silenciosamente qualquer artefato externo que grave o ID por valor.
 ### gold.dim_segmento
 Combinações únicas de segmento/cliente/cnae_ocupacao/porte.
 
-**Colunas:** id_segmento (PK, hash MD5 da chave natural), segmento,
+**Colunas:** id_segmento (PK, UBIGINT — hash da chave natural), segmento,
 cliente, cnae_ocupacao, porte
 
 **Volume:** 1.372 combinações

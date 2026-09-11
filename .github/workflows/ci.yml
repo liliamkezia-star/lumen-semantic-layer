@@ -46,6 +46,10 @@ jobs:
       - name: Criar banco sintético para o dbt
         run: python tests/criar_banco_ci.py
 
+      - name: Instalar pacotes do dbt (dbt_utils)
+        working-directory: transform/dbt
+        run: dbt deps --profiles-dir ~/.dbt
+
       - name: dbt build (modelos + testes)
         working-directory: transform/dbt
         run: dbt build --target ci --project-dir . --profiles-dir ~/.dbt

@@ -5,8 +5,14 @@
 -- seguintes. Isso não quebra o fato (reconstruído no mesmo run, rejuntado
 -- por chave natural), mas quebraria qualquer artefato fora do dbt que
 -- grave o ID por valor — catálogo do agente (S7), tabelas de ML (S9),
--- benchmark (S12). O hash garante que a mesma combinação sempre produza
--- o mesmo ID.
+-- benchmark (S12).
+--
+-- Usa hash() (UBIGINT) em vez de md5() (VARCHAR 32): chaves inteiras são
+-- significativamente mais eficientes para dicionarização e comparação em
+-- VertiPaq/Direct Lake — a camada que a Sprint 6 constrói sobre este
+-- modelo — e para joins em qualquer motor SQL. Com apenas centenas de
+-- combinações, a probabilidade de colisão em 64 bits é desprezível, e o
+-- teste unique no schema.yml a detectaria.
 
 with combinacoes_unicas as (
     select distinct
@@ -19,12 +25,7 @@ with combinacoes_unicas as (
 )
 
 select
-    md5(
-        coalesce(modalidade, '')
-        || '|' || coalesce(submodalidade, '')
-        || '|' || coalesce(origem, '')
-        || '|' || coalesce(indexador, '')
-    ) as id_modalidade,
+    {{ gerar_chave_substituta(['modalidade', 'submodalidade', 'origem', 'indexador']) }} as id_modalidade,
     modalidade,
     submodalidade,
     origem,
