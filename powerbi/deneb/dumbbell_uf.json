@@ -1,0 +1,82 @@
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": "container",
+  "height": "container",
+  "autosize": { "type": "fit", "contains": "padding" },
+  "data": { "name": "dataset" },
+  "transform": [
+    { "filter": "datum['nome_uf'] != null && datum['nome_uf'] != ''" },
+    { "calculate": "datum['Taxa de Inadimplência (dez/2024)'] * 100", "as": "tx2024" },
+    { "calculate": "datum['Taxa de Inadimplência (dez/2025)'] * 100", "as": "tx2025" },
+    {
+      "window": [{ "op": "rank", "as": "rank" }],
+      "sort": [{ "field": "Dumbbell · Δpp Modalidade", "order": "descending" }]
+    },
+    { "filter": "datum.rank <= 12" }
+  ],
+  "layer": [
+    {
+      "mark": { "type": "rule", "strokeWidth": 3, "opacity": 0.5 },
+      "encoding": {
+        "y": {
+          "field": "nome_uf", "type": "nominal", "title": null,
+          "sort": { "field": "Dumbbell · Δpp Modalidade", "order": "descending" },
+          "axis": { "labelFontSize": 11, "labelColor": "#14181C", "labelFont": "Segoe UI", "domain": false, "ticks": false, "labelLimit": 160 }
+        },
+        "x": {
+          "field": "tx2024", "type": "quantitative", "title": "Taxa de inadimplência (%)",
+          "axis": { "labelFontSize": 11, "titleFontSize": 11, "labelColor": "#5B6470", "titleColor": "#5B6470", "gridColor": "#EDEFF1", "gridDash": [2, 2], "domain": false }
+        },
+        "x2": { "field": "tx2025" },
+        "color": {
+          "condition": { "test": "datum['Dumbbell · Δpp Modalidade'] > 0", "value": "#A13A30" },
+          "value": "#1E6F58"
+        }
+      }
+    },
+    {
+      "mark": { "type": "point", "filled": false, "size": 70, "strokeWidth": 1.75 },
+      "encoding": {
+        "y": { "field": "nome_uf", "type": "nominal", "sort": { "field": "Dumbbell · Δpp Modalidade", "order": "descending" } },
+        "x": { "field": "tx2024", "type": "quantitative" },
+        "color": {
+          "condition": { "test": "datum['Dumbbell · Δpp Modalidade'] > 0", "value": "#A13A30" },
+          "value": "#1E6F58"
+        }
+      }
+    },
+    {
+      "mark": { "type": "point", "filled": true, "size": 70 },
+      "encoding": {
+        "y": { "field": "nome_uf", "type": "nominal", "sort": { "field": "Dumbbell · Δpp Modalidade", "order": "descending" } },
+        "x": { "field": "tx2025", "type": "quantitative" },
+        "color": {
+          "condition": { "test": "datum['Dumbbell · Δpp Modalidade'] > 0", "value": "#A13A30" },
+          "value": "#1E6F58"
+        },
+        "tooltip": [
+          { "field": "nome_uf", "type": "nominal", "title": "UF" },
+          { "field": "tx2024", "type": "quantitative", "title": "dez/2024 (%)", "format": ".2f" },
+          { "field": "tx2025", "type": "quantitative", "title": "dez/2025 (%)", "format": ".2f" },
+          { "field": "Dumbbell · Δpp Modalidade", "type": "quantitative", "title": "Δ pp", "format": "+.2f" }
+        ]
+      }
+    },
+    {
+      "mark": { "type": "text", "align": "left", "dx": 8, "fontSize": 11, "font": "Segoe UI" },
+      "encoding": {
+        "y": { "field": "nome_uf", "type": "nominal", "sort": { "field": "Dumbbell · Δpp Modalidade", "order": "descending" } },
+        "x": { "field": "tx2025", "type": "quantitative" },
+        "text": { "field": "Dumbbell · Δpp Modalidade", "type": "quantitative", "format": "+.1f" },
+        "color": {
+          "condition": { "test": "datum['Dumbbell · Δpp Modalidade'] > 0", "value": "#A13A30" },
+          "value": "#1E6F58"
+        }
+      }
+    }
+  ],
+  "config": {
+    "view": { "stroke": null },
+    "axis": { "domainColor": "#E3E7EA", "tickColor": "#E3E7EA" }
+  }
+}
