@@ -304,11 +304,14 @@ RETURN
 // casos concentrados nesses dois anos). Exibir junto de qualquer visual
 // que decomponha a carteira nas suas partes.
 Aviso Decomposição 2015-2016 =
-IF (
-    MIN ( dim_calendario[ano] ) <= 2016,
-    "⚠ 2015–2016: a soma das partes pode não fechar com a carteira ativa (ver notas metodológicas).",
-    BLANK ()
-)
+VAR _Atual = [Última Competência com Crédito]
+VAR _Ano = YEAR ( _Atual )
+RETURN
+    IF (
+        _Ano <= 2016,
+        "⚠ 2015–2016: a soma das partes pode não fechar com a carteira ativa (ver notas metodológicas).",
+        BLANK ()
+    )
 
 
 // ---------------------------------------------------------------------
@@ -389,6 +392,77 @@ RETURN
 // "PF = 61% da carteira e 2,1x a taxa de PJ" — a composição (peso do
 // segmento na carteira) é distinta da inadimplência; usa Carteira Ativa
 // filtrada por cliente, não as medidas de taxa.
+// ---------------------------------------------------------------------
+// 14. PÁGINA 2 (ONDE) — KPIs e nota de cobertura
+// ---------------------------------------------------------------------
+
+Carteira Vencida Δ Absoluto a/a =
+[Carteira Vencida] - [Carteira Vencida AA]
+
+Carteira Vencida Δ Absoluto a/a (Texto) =
+VAR _V = [Carteira Vencida Δ Absoluto a/a]
+VAR _Sinal = IF ( _V >= 0, "+", "-" )
+RETURN
+    _Sinal & "R$ " & SUBSTITUTE ( FORMAT ( DIVIDE ( ABS ( _V ), 1000000000 ), "0.0" ), ".", "," ) & " Bi"
+
+Carteira (R$ Bi) · Matriz =
+ROUND ( DIVIDE ( [Carteira Ativa], 1000000000 ), 1 )
+
+// ---------------------------------------------------------------------
+// 15. PÁGINA 4 (FICHA DE SEGMENTO) — drill-through
+// ---------------------------------------------------------------------
+
+// ---------------------------------------------------------------------
+// 16. PÁGINA 3 (CONTEXTO MACRO) — séries SGS
+// Séries mensais do SGS têm data no PRIMEIRO dia do mês (ex.: 2025-12-01),
+// diferente de fato_credito que usa o ÚLTIMO dia (2025-12-31) — por isso
+// nenhum filtro de data exata é aplicado aqui: a medida só reage ao
+// contexto que o próprio gráfico (small multiples) já estabelece por
+// linha, sem precisar acertar a convenção de dia do mês.
+// ---------------------------------------------------------------------
+
+Selic Meta (SGS) =
+CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "selic_meta" )
+
+Spread Médio (SGS) =
+CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "spread_medio_total" )
+
+Endividamento das Famílias (SGS) =
+CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "endividamento_familias" )
+
+Crédito/PIB (SGS) =
+CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "credito_pib" )
+
+Concessões PF (SGS) =
+CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "concessoes_pf_total" )
+
+Concessões PJ (SGS) =
+CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "concessoes_pj_total" )
+
+// Medida genérica pro gráfico de pequenos múltiplos (Small Multiples) —
+// reage ao filtro de nome_serie que o próprio campo "Pequenos múltiplos"
+// aplica por painel. NÃO usar CALCULATE(...,nome_serie IN {...}) aqui:
+// isso SOBRESCREVE (não soma a) o filtro de nome_serie que cada painel já
+// aplica, quebrando o gráfico inteiro (todo painel mostraria a mesma
+// mistura de todas as séries). A restrição às 6 séries corretas fica
+// como filtro do próprio visual (Filtros > nome_serie), fora da medida.
+Valor (Contexto Macro) =
+AVERAGE ( fato_indicador_macro[valor] )
+
+Subtítulo · Contexto Macro =
+"As séries do SGS avançam " & [Defasagem SCR vs SGS (meses)] & " meses além do fim dos dados de crédito — ver faixa sombreada abaixo · sem afirmação de causalidade: as séries são apresentadas lado a lado, a leitura fica com quem sabe"
+
+Ficha · Corte Ativo =
+VAR _Mod = SELECTEDVALUE ( dim_modalidade[modalidade], "Todas as modalidades" )
+VAR _UF = SELECTEDVALUE ( dim_uf[nome_uf], "Todas as UFs" )
+VAR _Cliente = SELECTEDVALUE ( dim_segmento[cliente], "PF e PJ" )
+RETURN
+    TRIM ( _Mod ) & " · " & _UF & " · " & _Cliente
+
+Cobertura · Nota Página 2 =
+"Cobertura de número de operações: " & SUBSTITUTE ( FORMAT ( [Cobertura Nº de Operações], "0.0%" ), ".", "," )
+    & " das linhas na competência selecionada · valores consideram apenas modalidades com carteira ≥ 1% do total nacional"
+
 Composição PF/PJ · Rodapé =
 VAR _PctPF = DIVIDE ( CALCULATE ( [Carteira Ativa], dim_segmento[cliente] = "PF" ), [Carteira Ativa] )
 VAR _Razao = DIVIDE ( [Taxa de Inadimplência PF], [Taxa de Inadimplência PJ] )
@@ -442,25 +516,39 @@ Rodapé · Procedência da Página =
 
 // ---------------------------------------------------------------------
 // 13. DUMBBELL POR MODALIDADE — página 1 (Deneb)
-// Dataset: uma linha por modalidade, com a taxa em dez/2024 e dez/2025.
-// Mesmo corte de materialidade (>= 1% da carteira total) da medida de
-// Insight (seção 9) — sem ele, "Adiantamentos a depositantes" (carteira
-// de R$ 1,76) entraria no gráfico com uma barra enorme sem significado.
+// Dataset: uma linha por modalidade, com a taxa na última competência e
+// na mesma competência do ano anterior. Mesmo corte de materialidade
+// (>= 1% da carteira total) da medida de Insight (seção 9) — sem ele,
+// "Adiantamentos a depositantes" (carteira de R$ 1,76) entraria no
+// gráfico com uma barra enorme sem significado.
+//
+// ATENÇÃO — terceira ocorrência da mesma classe de bug do ADR-010/011
+// (ver ADR-014): os nomes das duas medidas abaixo mantêm "(dez/2024)" e
+// "(dez/2025)" por compatibilidade com os visuais já construídos no
+// Power BI (renomear quebraria os campos já arrastados no dumbbell e na
+// tabela de reconciliação), mas o CONTEÚDO não é mais fixo nessas datas
+// — usa [Última Competência com Crédito] + EDATE(-12), então acompanha
+// o slicer de competência e não congela quando a Gold ganhar jan/2026.
 // ---------------------------------------------------------------------
 
-Taxa de Inadimplência (dez/2024) =
-CALCULATE (
-    [Taxa de Inadimplência (SCR.data)],
-    REMOVEFILTERS ( dim_calendario ),
-    dim_calendario[data] = DATE ( 2024, 12, 31 )
-)
-
 Taxa de Inadimplência (dez/2025) =
-CALCULATE (
-    [Taxa de Inadimplência (SCR.data)],
-    REMOVEFILTERS ( dim_calendario ),
-    dim_calendario[data] = DATE ( 2025, 12, 31 )
-)
+VAR _Atual = [Última Competência com Crédito]
+RETURN
+    CALCULATE (
+        [Taxa de Inadimplência (SCR.data)],
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] = _Atual
+    )
+
+Taxa de Inadimplência (dez/2024) =
+VAR _Atual = [Última Competência com Crédito]
+VAR _AnoAnterior = EDATE ( _Atual, -12 )
+RETURN
+    CALCULATE (
+        [Taxa de Inadimplência (SCR.data)],
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] = _AnoAnterior
+    )
 
 Dumbbell · Δpp Modalidade =
 ( [Taxa de Inadimplência (dez/2025)] - [Taxa de Inadimplência (dez/2024)] ) * 100
@@ -498,18 +586,43 @@ ROUND ( [Saldo Crédito BCB (SGS 20539)], 0 )
 Diferença % (Texto) =
 SUBSTITUTE ( FORMAT ( [Divergência SCR vs SGS (Saldo) %], "+0.00;-0.00" ), ".", "," ) & "%"
 
+// Mesma correção acima (ADR-014): trocado DATE(2025,12,31) fixo por
+// [Última Competência com Crédito].
 Dumbbell · Elegivel (Materialidade) =
+VAR _Atual = [Última Competência com Crédito]
 VAR _TotalCarteira =
     CALCULATE (
         [Carteira Ativa],
         REMOVEFILTERS ( dim_calendario ),
         REMOVEFILTERS ( dim_modalidade ),
-        dim_calendario[data] = DATE ( 2025, 12, 31 )
+        dim_calendario[data] = _Atual
     )
 VAR _CarteiraModalidade =
-    CALCULATE ( [Carteira Ativa], REMOVEFILTERS ( dim_calendario ), dim_calendario[data] = DATE ( 2025, 12, 31 ) )
+    CALCULATE ( [Carteira Ativa], REMOVEFILTERS ( dim_calendario ), dim_calendario[data] = _Atual )
 RETURN
     _CarteiraModalidade >= _TotalCarteira * 0.01
+
+// Mesma razão de Dumbbell · Elegivel (Materialidade) acima, mas como número
+// em vez de booleano. Motivo: filtro de visual sobre medida booleana não
+// expande no Power BI Desktop (card de filtro fica vazio); o workaround
+// usado na Página 2 (matriz e scatter) era um filtro numérico fixo
+// "Carteira (R$ Bi) · Matriz >= 74" — proxy estático de 1% da carteira total
+// no momento em que foi calculado, que fica desatualizado silenciosamente
+// se a carteira total mudar de patamar. Esta medida substitui esse proxy
+// por uma razão que se recalcula sozinha a cada competência.
+% Carteira do Total (Modalidade) =
+VAR _Atual = [Última Competência com Crédito]
+VAR _CarteiraModalidade =
+    CALCULATE ( [Carteira Ativa], REMOVEFILTERS ( dim_calendario ), dim_calendario[data] = _Atual )
+VAR _TotalCarteira =
+    CALCULATE (
+        [Carteira Ativa],
+        REMOVEFILTERS ( dim_calendario ),
+        REMOVEFILTERS ( dim_modalidade ),
+        dim_calendario[data] = _Atual
+    )
+RETURN
+    DIVIDE ( _CarteiraModalidade, _TotalCarteira )
 
 
 // ---------------------------------------------------------------------
@@ -572,6 +685,6 @@ VAR _TopRow = TOPN ( 1, _Ranking, [@Delta], DESC )
 VAR _TopModalidade = TRIM ( MAXX ( _TopRow, dim_modalidade[modalidade] ) )
 VAR _TopDelta = MAXX ( _TopRow, [@Delta] )
 RETURN
-    "A deterioração está concentrada em " & _TopModalidade & " (" & FORMAT ( _TopDelta, "+0.0" ) & " pp) e em pessoa física ("
-        & FORMAT ( [Taxa de Inadimplência PF Δpp a/a], "+0.0" ) & " pp vs "
-        & FORMAT ( [Taxa de Inadimplência PJ Δpp a/a], "+0.0" ) & " pp em PJ)."
+    "A deterioração está concentrada em " & _TopModalidade & " (" & SUBSTITUTE ( FORMAT ( _TopDelta, "+0.0" ), ".", "," ) & " pp) e em pessoa física ("
+        & SUBSTITUTE ( FORMAT ( [Taxa de Inadimplência PF Δpp a/a], "+0.0" ), ".", "," ) & " pp vs "
+        & SUBSTITUTE ( FORMAT ( [Taxa de Inadimplência PJ Δpp a/a], "+0.0" ), ".", "," ) & " pp em PJ)."
