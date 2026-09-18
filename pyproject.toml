@@ -16,6 +16,12 @@ ignore = [
     # Mensagens de erro detalhadas são intencionais neste projeto:
     # ajudam a diagnosticar problemas de schema/API sem abrir o código.
     "TRY003",
+    # N818 exige sufixo "Error" em nome de exceção. O código deste projeto
+    # é escrito em português (medidas, ADRs, identificadores), e
+    # `MedidaDesconhecidaError` seria um híbrido pior de ler que
+    # `MedidaDesconhecida`. A intenção da regra — deixar claro que a classe
+    # é uma exceção — é atendida pelos nomes escolhidos.
+    "N818",
 ]
 
 [tool.ruff.lint.per-file-ignores]
