@@ -205,10 +205,19 @@ def avaliar(caso: Caso, agente_novo) -> Veredito:
 
 
 def main() -> int:
+    """Uso: python -m agent.avaliacao [a_partir_do_caso]
+
+    O número opcional retoma a partir de um caso (contando de 1). A cota
+    gratuita da API costuma acabar no meio da rodada; repetir os casos que
+    já passaram só gasta a cota que falta para os outros.
+    """
     from .agente import Agente, ModelosIndisponiveis
 
+    inicio = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     vereditos: list[Veredito] = []
     for indice, caso in enumerate(CASOS, start=1):
+        if indice < inicio:
+            continue
         print(f"[{indice:>2}/{len(CASOS)}] {caso.nome} ...", end=" ", flush=True)
         try:
             veredito = avaliar(caso, Agente)
@@ -222,9 +231,15 @@ def main() -> int:
 
     executados = [v for v in vereditos if not v.erro]
     aprovados = sum(v.passou for v in executados)
+    pedidos = len(CASOS) - inicio + 1
     print(f"\n{aprovados}/{len(executados)} casos aprovados", end="")
-    if len(executados) < len(CASOS):
-        print(f" ({len(CASOS) - len(executados)} não executados)", end="")
+    if len(executados) < pedidos:
+        faltam = inicio + len(executados)
+        print(
+            f" ({pedidos - len(executados)} não executados — retome com: "
+            f"python -m agent.avaliacao {faltam})",
+            end="",
+        )
     print()
 
     RESULTADOS.mkdir(exist_ok=True)
@@ -235,7 +250,7 @@ def main() -> int:
         encoding="utf-8",
     )
     print(f"Relatório completo, com as respostas para revisão: {arquivo}")
-    return 0 if aprovados == len(CASOS) else 1
+    return 0 if aprovados == pedidos else 1
 
 
 if __name__ == "__main__":
