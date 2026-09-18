@@ -53,7 +53,12 @@ def modelo_falso(monkeypatch):
             raise CorteDesconhecido(corte)
         return VALORES.get(corte, ())
 
-    cat = Catalogo(medidas={n: Medida(nome=n, tabela="fato_credito") for n in MEDIDAS})
+    cat = Catalogo(
+        medidas={
+            n: Medida(nome=n, tabela="fato_credito", unidade=catalogo.UNIDADES[n])
+            for n in MEDIDAS
+        }
+    )
     monkeypatch.setattr(catalogo, "carregar", lambda: cat)
     monkeypatch.setattr(catalogo, "valores_do_corte", valores)
     monkeypatch.setattr(consultas, "executar_dax", executar)
@@ -149,20 +154,79 @@ def test_limite_e_teto_de_seguranca(modelo_falso):
 # --- apresentação: o modelo de linguagem não decide a escala ------------
 
 
+# Valores reais de dez/2025, com o resultado conferido contra o dashboard.
 @pytest.mark.parametrize(
     ("medida", "valor", "esperado"),
     [
         ("Taxa de Inadimplência (SCR.data)", 0.041044414423335666, "4,10%"),
+        ("Inadimplência BCB (SGS 21082)", 0.042, "4,20%"),
+        ("% Carteira do Total (Modalidade)", 0.3476, "34,76%"),
         ("Carteira Vencida Δ% a/a", 0.6310814128550438, "63,11%"),
-        ("Taxa de Inadimplência Δpp a/a", 1.1134, "1,11 pp"),
+        ("Taxa de Inadimplência Δpp a/a", 1.113421393995244, "1,11 pp"),
+        ("Divergência vs BCB (pp)", -0.09555855766643362, "-0,10 pp"),
+        ("Divergência SCR vs SGS (Saldo) %", 4.313890002225459, "4,31%"),
+        ("Crédito/PIB (SGS)", 56.02, "56,02%"),
         ("Carteira Ativa", 7444293999119.219, "R$ 7,44 Tri"),
-        ("Carteira Ativa", 5119464780165.182, "R$ 5,12 Tri"),
+        ("Carteira Vencida Δ Absoluto a/a", 89972408924.41003, "R$ 89,97 Bi"),
+        ("SCR (R$ mi)", 7444294.0, "R$ 7,44 Tri"),
+        ("Concessões PF (SGS)", 407477.0, "R$ 407,48 Bi"),
         ("Número de Operações", 928619478, "928.619.478"),
+        ("Defasagem SCR vs SGS (meses)", 7, "7 meses"),
+        ("Última Competência com Crédito", "2025-12-31T00:00:00", "31/12/2025"),
         ("Carteira Ativa", None, "sem valor"),
     ],
 )
-def test_formatacao_segue_a_natureza_da_medida(medida, valor, esperado):
-    assert ferramentas.formatar(valor, medida) == esperado
+def test_formatacao_segue_a_unidade_declarada(medida, valor, esperado):
+    assert ferramentas.formatar(valor, catalogo.UNIDADES[medida]) == esperado
+
+
+def test_toda_unidade_declarada_tem_formatacao_propria():
+    """Unidade com erro de digitação cairia silenciosamente no genérico."""
+    conhecidas = {
+        "fracao", "percentual", "pp", "reais", "reais_milhoes",
+        "contagem", "meses", "data", "numero",
+    }
+    assert set(catalogo.UNIDADES.values()) <= conhecidas
+
+
+# --- curadoria: o agente vê medida de negócio, não peça de dashboard ----
+
+
+def test_catalogo_expoe_so_o_declarado_e_sinaliza_medida_nova(monkeypatch):
+    no_modelo = [
+        "Carteira Ativa",
+        "Título · Diagnóstico",
+        "Taxa de Inadimplência PF (Texto)",
+        "Taxa de Inadimplência (dez/2024)",
+        "Valor (Contexto Macro)",
+        "Medida Criada Ontem",
+    ]
+    monkeypatch.setattr(
+        catalogo,
+        "executar_dax",
+        lambda _: [{"[Name]": n, "[Table]": "fato_credito"} for n in no_modelo],
+    )
+    catalogo.carregar.cache_clear()
+    try:
+        cat = catalogo.carregar()
+    finally:
+        catalogo.carregar.cache_clear()
+    assert list(cat.medidas) == ["Carteira Ativa"]
+    assert cat.nao_classificadas == ["Medida Criada Ontem"]
+
+
+def test_medida_declarada_mas_removida_do_modelo_some_do_agente(monkeypatch):
+    monkeypatch.setattr(
+        catalogo,
+        "executar_dax",
+        lambda _: [{"[Name]": "Carteira Ativa", "[Table]": "fato_credito"}],
+    )
+    catalogo.carregar.cache_clear()
+    try:
+        cat = catalogo.carregar()
+    finally:
+        catalogo.carregar.cache_clear()
+    assert "Taxa de Inadimplência PF" not in cat.medidas
 
 
 # --- ferramentas: erro de escolha volta para o modelo se corrigir -------

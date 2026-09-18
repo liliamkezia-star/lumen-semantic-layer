@@ -26,43 +26,42 @@ execucao: contextvars.ContextVar[list[consultas.Resultado]] = contextvars.Contex
 )
 
 
-# Como a medida é apresentada. Estas regras existem porque o
-# `executeQueries` devolve `[FormatString]` e `[FormatStringDefinition]`
-# como null — medido: 73 de 73 medidas — embora o XMLA os traga
-# preenchidos. A API REST não expõe metadados de formatação do modelo.
-#
-# A alternativa seria deixar a apresentação com o modelo de linguagem, e
-# é justamente o que este projeto não pode fazer: 0,041 virar "0,04%" é o
-# tipo de erro que a camada certificada existe para impedir. Então a regra
-# fica aqui, explícita e versionada, em vez de implícita no prompt.
-FRACAO = ("taxa de", "cobertura", "δ% a/a", "divergência")  # 0,041 -> 4,10%
-PONTOS = ("δpp", "(pp)")  # já vem em pontos percentuais
-MOEDA = ("carteira", "ativo problemático", "saldo", "(r$")
-CONTAGEM = ("número de operações", "linhas do fato")
+def formatar(valor: Any, unidade: str = "numero") -> str:
+    """Apresenta o valor segundo a unidade declarada em `catalogo.UNIDADES`.
 
-
-def formatar(valor: Any, nome_da_medida: str = "") -> str:
-    """Apresenta o valor conforme a natureza da medida certificada."""
+    Feito aqui e não pelo modelo de linguagem: 0,041 virar "0,04%" é o
+    tipo de erro que a camada certificada existe para impedir.
+    """
     if valor is None:
         return "sem valor"
+    if unidade == "data":
+        texto = str(valor)
+        return f"{texto[8:10]}/{texto[5:7]}/{texto[:4]}" if len(texto) >= 10 else texto
     if not isinstance(valor, (int, float)) or isinstance(valor, bool):
         return str(valor)
 
-    nome = nome_da_medida.lower()
-    if any(t in nome for t in PONTOS):
-        return _br(valor) + " pp"
-    if any(t in nome for t in FRACAO):
+    if unidade == "fracao":
         return _br(valor * 100) + "%"
-    if any(t in nome for t in CONTAGEM):
+    if unidade == "percentual":
+        return _br(valor) + "%"
+    if unidade == "pp":
+        return _br(valor) + " pp"
+    if unidade == "reais_milhoes":
+        return _reais(valor * 1e6)
+    if unidade == "reais":
+        return _reais(valor)
+    if unidade == "contagem":
         return f"{int(valor):,}".replace(",", ".")
-    if any(t in nome for t in MOEDA):
-        for limite, sufixo in ((1e12, "Tri"), (1e9, "Bi"), (1e6, "Mi")):
-            if abs(valor) >= limite:
-                return "R$ " + _br(valor / limite) + f" {sufixo}"
-        return "R$ " + _br(valor)
-    if isinstance(valor, float):
-        return _br(valor)
-    return f"{valor:,}".replace(",", ".")
+    if unidade == "meses":
+        return f"{int(valor)} meses"
+    return _br(valor) if isinstance(valor, float) else f"{valor:,}".replace(",", ".")
+
+
+def _reais(valor: float) -> str:
+    for limite, sufixo in ((1e12, "Tri"), (1e9, "Bi"), (1e6, "Mi")):
+        if abs(valor) >= limite:
+            return "R$ " + _br(valor / limite) + f" {sufixo}"
+    return "R$ " + _br(valor)
 
 
 def _br(numero: float) -> str:
@@ -128,8 +127,8 @@ def consultar_metricas(
     for linha in resultado.linhas:
         formatada = {}
         for chave, valor in linha.items():
-            eh_medida = chave in cat.medidas
-            formatada[chave] = formatar(valor, chave) if eh_medida else valor
+            medida = cat.medidas.get(chave)
+            formatada[chave] = formatar(valor, medida.unidade) if medida else valor
         linhas.append(formatada)
 
     if not linhas:
