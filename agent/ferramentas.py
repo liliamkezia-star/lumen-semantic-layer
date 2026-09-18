@@ -26,19 +26,36 @@ execucao: contextvars.ContextVar[list[consultas.Resultado]] = contextvars.Contex
 )
 
 
-def formatar(valor: Any, formato: str) -> str:
-    """Formata segundo o FormatString da medida certificada.
+# Como a medida é apresentada. Estas regras existem porque o
+# `executeQueries` devolve `[FormatString]` e `[FormatStringDefinition]`
+# como null — medido: 73 de 73 medidas — embora o XMLA os traga
+# preenchidos. A API REST não expõe metadados de formatação do modelo.
+#
+# A alternativa seria deixar a apresentação com o modelo de linguagem, e
+# é justamente o que este projeto não pode fazer: 0,041 virar "0,04%" é o
+# tipo de erro que a camada certificada existe para impedir. Então a regra
+# fica aqui, explícita e versionada, em vez de implícita no prompt.
+FRACAO = ("taxa de", "cobertura", "δ% a/a", "divergência")  # 0,041 -> 4,10%
+PONTOS = ("δpp", "(pp)")  # já vem em pontos percentuais
+MOEDA = ("carteira", "ativo problemático", "saldo", "(r$")
+CONTAGEM = ("número de operações", "linhas do fato")
 
-    Feito em Python, não pelo modelo: assim o agente não precisa decidir
-    se 0,041 é "0,041" ou "4,1%" — a própria definição da medida decide.
-    """
+
+def formatar(valor: Any, nome_da_medida: str = "") -> str:
+    """Apresenta o valor conforme a natureza da medida certificada."""
     if valor is None:
         return "sem valor"
     if not isinstance(valor, (int, float)) or isinstance(valor, bool):
         return str(valor)
-    if "%" in formato:
-        return f"{valor * 100:.2f}".replace(".", ",") + "%"
-    if "R$" in formato:
+
+    nome = nome_da_medida.lower()
+    if any(t in nome for t in PONTOS):
+        return _br(valor) + " pp"
+    if any(t in nome for t in FRACAO):
+        return _br(valor * 100) + "%"
+    if any(t in nome for t in CONTAGEM):
+        return f"{int(valor):,}".replace(",", ".")
+    if any(t in nome for t in MOEDA):
         for limite, sufixo in ((1e12, "Tri"), (1e9, "Bi"), (1e6, "Mi")):
             if abs(valor) >= limite:
                 return "R$ " + _br(valor / limite) + f" {sufixo}"
@@ -75,6 +92,12 @@ def consultar_metricas(
         descendente: ordem decrescente (padrão) ou crescente.
         limite: máximo de linhas quando houver agrupamento. 0 = sem limite.
     """
+    # O modelo às vezes manda uma medida solta em vez de lista; iterar a
+    # string caractere a caractere daria um erro incompreensível ("'T' não
+    # é uma medida certificada").
+    if isinstance(medidas, str):
+        medidas = [medidas]
+
     try:
         filtros = json.loads(filtros_json) if filtros_json.strip() else None
     except json.JSONDecodeError as erro:
@@ -105,8 +128,8 @@ def consultar_metricas(
     for linha in resultado.linhas:
         formatada = {}
         for chave, valor in linha.items():
-            medida = cat.medidas.get(chave)
-            formatada[chave] = formatar(valor, medida.formato) if medida else valor
+            eh_medida = chave in cat.medidas
+            formatada[chave] = formatar(valor, chave) if eh_medida else valor
         linhas.append(formatada)
 
     if not linhas:
