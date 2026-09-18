@@ -8,9 +8,13 @@ chegam como JSON em texto e são validados aqui, não pelo schema.
 Nenhuma destas funções confia no que recebe: tudo passa por
 `consultas.py`, que recusa medida, corte ou valor que não exista no
 catálogo certificado.
-"""
 
-from __future__ import annotations
+Este módulo não usa `from __future__ import annotations`, de propósito:
+o SDK do Gemini lê as anotações para validar os argumentos antes de
+chamar a função, e com anotações em texto ele compara o valor contra a
+string "list[str]" e quebra — foi a causa de a ferramenta nunca executar
+nos primeiros testes (ver test_ferramentas_executam_pelo_caminho_do_sdk).
+"""
 
 import contextvars
 import json

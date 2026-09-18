@@ -250,6 +250,30 @@ def test_ferramenta_rejeita_filtro_que_nao_e_json(modelo_falso):
     assert modelo_falso == []
 
 
+@pytest.mark.parametrize("ferramenta", ferramentas.DISPONIVEIS)
+def test_anotacoes_das_ferramentas_sao_tipos_reais(ferramenta):
+    """O SDK valida os argumentos contra as anotações; anotação em texto
+    (efeito de `from __future__ import annotations`) quebra a chamada."""
+    for nome, anotacao in ferramenta.__annotations__.items():
+        assert not isinstance(anotacao, str), f"{ferramenta.__name__}.{nome}"
+
+
+def test_ferramentas_executam_pelo_caminho_do_sdk(modelo_falso):
+    """Chama a ferramenta como o SDK do Gemini chama na execução automática.
+
+    Os demais testes chamam a função direto e não pegaram o bug que fez a
+    ferramenta nunca executar nos primeiros testes com o modelo. Usa uma
+    função interna do SDK de propósito: é ela que roda em produção.
+    """
+    from google.genai import _extra_utils
+
+    resposta = _extra_utils.invoke_function_from_dict_args(
+        {"medidas": ["Carteira Ativa"], "filtros_json": '{"cliente": "PF"}'},
+        ferramentas.consultar_metricas,
+    )
+    assert json.loads(resposta)["linhas"][0]["Carteira Ativa"] == "R$ 7,44 Tri"
+
+
 def test_ferramenta_registra_a_consulta_para_auditoria(modelo_falso):
     registro: list = []
     marca = ferramentas.execucao.set(registro)
