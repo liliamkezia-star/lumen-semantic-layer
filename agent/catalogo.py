@@ -43,12 +43,100 @@ CORTES: dict[str, tuple[str, str]] = {
 }
 
 
+# Medidas expostas ao agente e a unidade em que cada uma vem do modelo.
+#
+# Duas razões para a lista ser explícita:
+#
+# 1. O modelo semântico serve também ao dashboard, e metade das medidas
+#    visíveis são peças de visual (títulos, rodapés, rótulos de ponta,
+#    variantes em texto). Expostas ao agente, elas viram ruído ou erro —
+#    `Valor (Contexto Macro)` sem o contexto do gráfico devolve uma média
+#    sem sentido entre séries de unidades diferentes.
+# 2. O `executeQueries` não devolve o FormatString das medidas (medido:
+#    null nas 73), e deduzir a unidade pelo nome errou em oito medidas na
+#    primeira versão — `SCR (R$ mi)` saía como "R$ 7,44 Mi" em vez de
+#    R$ 7,44 Tri. A unidade tem que ser declarada, não adivinhada.
+#
+# A existência continua vindo do modelo ao vivo: uma medida listada aqui
+# mas removida do `lumen_semantico` some do agente sem mudança de código.
+UNIDADES: dict[str, str] = {
+    # frações: 0,041 -> 4,10%
+    "Taxa de Inadimplência (SCR.data)": "fracao",
+    "Taxa de Inadimplência PF": "fracao",
+    "Taxa de Inadimplência PJ": "fracao",
+    "Taxa de Ativo Problemático": "fracao",
+    "Taxa de Carteira Vencida": "fracao",
+    "Inadimplência BCB (SGS 21082)": "fracao",
+    "Cobertura Nº de Operações": "fracao",
+    "% Carteira do Total (Modalidade)": "fracao",
+    "Carteira Ativa Δ% a/a": "fracao",
+    "Carteira Vencida Δ% a/a": "fracao",
+    "Ativo Problemático Δ% a/a": "fracao",
+    # já em pontos percentuais
+    "Taxa de Inadimplência Δpp a/a": "pp",
+    "Taxa de Inadimplência PF Δpp a/a": "pp",
+    "Taxa de Inadimplência PJ Δpp a/a": "pp",
+    "Taxa de Ativo Problemático Δpp a/a": "pp",
+    "Divergência vs BCB (pp)": "pp",
+    "Spread Médio (SGS)": "pp",
+    # já em percentual: 56,02 -> 56,02%
+    "Divergência SCR vs SGS (Saldo) %": "percentual",
+    "Crédito/PIB (SGS)": "percentual",
+    "Endividamento das Famílias (SGS)": "percentual",
+    "Selic Meta (SGS)": "percentual",
+    # reais
+    "Carteira Ativa": "reais",
+    "Carteira Ativa AA": "reais",
+    "Carteira a Vencer": "reais",
+    "Carteira Vencida": "reais",
+    "Carteira Vencida AA": "reais",
+    "Carteira Vencida Δ Absoluto a/a": "reais",
+    "Carteira Inadimplência": "reais",
+    "Ativo Problemático": "reais",
+    "Ativo Problemático AA": "reais",
+    # séries em milhões de reais
+    "SCR (R$ mi)": "reais_milhoes",
+    "SGS (R$ mi)": "reais_milhoes",
+    "Saldo Crédito BCB (SGS 20539)": "reais_milhoes",
+    "Concessões PF (SGS)": "reais_milhoes",
+    "Concessões PJ (SGS)": "reais_milhoes",
+    # demais
+    "Número de Operações": "contagem",
+    "Linhas do Fato": "contagem",
+    "Defasagem SCR vs SGS (meses)": "meses",
+    "Última Competência com Crédito": "data",
+    "Velocidade da Deterioração": "numero",
+}
+
+# Fora do agente de propósito, e não por esquecimento:
+# - `Taxa de Inadimplência (dez/2024)` e `(dez/2025)`: o nome promete uma
+#   data fixa que a medida não tem desde a ADR-014. Para o agente, a forma
+#   correta é `Taxa de Inadimplência (SCR.data)` com filtro de competência.
+# - `Valor (Contexto Macro)`: só tem sentido dentro do gráfico de pequenos
+#   múltiplos, com a série já filtrada.
+# - `Carteira (R$ Bi) · Matriz` e `Competência Selecionada`: duplicam
+#   medidas expostas, em outra unidade ou em texto.
+EXCLUIDAS = {
+    "Taxa de Inadimplência (dez/2024)",
+    "Taxa de Inadimplência (dez/2025)",
+    "Valor (Contexto Macro)",
+    "Aviso Decomposição 2015-2016",
+    "Competência Selecionada",
+}
+
+
+def _e_peca_de_dashboard(nome: str) -> bool:
+    """Convenção do modelo: ` · ` marca ajudante de visual e `(Texto)`
+    marca variante já formatada para cartão."""
+    return " · " in nome or "(Texto)" in nome or nome in EXCLUIDAS
+
+
 @dataclass(frozen=True)
 class Medida:
     nome: str
     tabela: str
+    unidade: str = "numero"
     descricao: str = ""
-    formato: str = ""
 
     def referencia_dax(self) -> str:
         return f"[{self.nome}]"
@@ -57,6 +145,9 @@ class Medida:
 @dataclass
 class Catalogo:
     medidas: dict[str, Medida] = field(default_factory=dict)
+    # Medidas que existem no modelo mas ninguém decidiu ainda se o agente
+    # deve ver nem em que unidade apresentar. Ficam de fora até decisão.
+    nao_classificadas: list[str] = field(default_factory=list)
 
     def nomes_de_medidas(self) -> list[str]:
         return sorted(self.medidas)
@@ -115,15 +206,19 @@ def carregar() -> Catalogo:
     """Lê as medidas certificadas visíveis do modelo."""
     linhas = executar_dax("EVALUATE FILTER ( INFO.VIEW.MEASURES (), NOT [IsHidden] )")
     medidas = {}
+    nao_classificadas = []
     for linha in linhas:
         nome = linha["[Name]"]
-        medidas[nome] = Medida(
-            nome=nome,
-            tabela=linha.get("[Table]") or "",
-            descricao=linha.get("[Description]") or "",
-            formato=linha.get("[FormatString]") or "",
-        )
-    return Catalogo(medidas=medidas)
+        if nome in UNIDADES:
+            medidas[nome] = Medida(
+                nome=nome,
+                tabela=linha.get("[Table]") or "",
+                unidade=UNIDADES[nome],
+                descricao=linha.get("[Description]") or "",
+            )
+        elif not _e_peca_de_dashboard(nome):
+            nao_classificadas.append(nome)
+    return Catalogo(medidas=medidas, nao_classificadas=sorted(nao_classificadas))
 
 
 @lru_cache(maxsize=32)

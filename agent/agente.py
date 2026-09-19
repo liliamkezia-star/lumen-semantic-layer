@@ -11,12 +11,13 @@ Provedor atual: Google Gemini (ver ADR-015).
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass, field
 
 from google import genai
 from google.genai import errors, types
 
-from . import catalogo, consultas, ferramentas
+from . import catalogo, consultas, ferramentas, registro
 
 # Versões fixadas de propósito, em vez do alias `gemini-flash-latest`: um
 # modelo que muda sozinho embaixo do projeto tornaria a avaliação do
@@ -27,8 +28,20 @@ from . import catalogo, consultas, ferramentas
 # projeto, modelos alternam entre disponível e indisponível em questão de
 # segundos. Cair para o próximo é o comportamento correto; falhar na cara
 # de quem perguntou não é.
+#
+# Os Gemma 4 (modelos abertos do Google, servidos pela mesma API) têm cota
+# gratuita separada dos Gemini Flash e suportam ferramentas — medido: com a
+# cota dos Flash esgotada, o gemma-4-26b-a4b-it respondeu o ranking de UF
+# certo, com o DAX certo. Mais lentos (~40s por pergunta), mas é o que
+# mantém o projeto sem custo.
 MODELO = os.getenv("LUMEN_MODELO_LLM", "gemini-3.6-flash")
-RESERVAS = ["gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite"]
+RESERVAS = [
+    "gemini-3.7-flash",
+    "gemini-3.8-flash",
+    "gemini-3.1-flash-lite",
+    "gemma-4-26b-a4b-it",
+    "gemma-4-31b-it",
+]
 
 
 class ChaveAusente(RuntimeError):
@@ -54,8 +67,9 @@ Responda em português do Brasil.
 
 REGRA CENTRAL, INEGOCIÁVEL: todo número que você escrever tem que ter vindo de uma \
 chamada a `consultar_metricas` feita nesta conversa. Você não sabe nenhum valor de \
-cor. Se não consultou, não afirma — nem que o número pareça óbvio, nem que ele tenha \
-aparecido antes na conversa. Em pergunta de continuação, consulte de novo.
+cor. Se não consultou, não afirma — nem que o número pareça óbvio. Um valor que você \
+já trouxe de uma consulta em pergunta anterior desta conversa pode ser citado de novo \
+(por exemplo, para comparar); qualquer valor novo exige consulta.
 
 Se a pergunta não puder ser respondida com as medidas e cortes disponíveis, diga isso \
 claramente e mostre o que dá para responder de perto. Recusar bem faz parte do \
@@ -108,27 +122,40 @@ class Agente:
                 maximum_remote_calls=8
             ),
         )
-        # Histórico só de texto, sem o tráfego de ferramentas. É deliberado:
-        # numa pergunta de continuação ("e para PJ?"), o agente é obrigado a
-        # consultar de novo em vez de reaproveitar um número que ficou no
-        # contexto — que é exatamente a regra que o projeto quer garantir.
+        # Histórico só de texto, sem o tráfego de ferramentas: mantém o
+        # contexto enxuto (a cota gratuita é por tokens por minuto). Números
+        # das respostas anteriores podem ser citados de novo porque já vieram
+        # de consulta certificada nesta conversa — ver ADR-015, seção
+        # "Ajuste da regra de lastro".
         self.historico: list[types.Content] = []
 
     def perguntar(self, pergunta: str) -> Resposta:
-        registro: list[consultas.Resultado] = []
-        marca = ferramentas.execucao.set(registro)
+        executadas: list[consultas.Resultado] = []
+        marca = ferramentas.execucao.set(executadas)
+        inicio = time.monotonic()
         try:
             resposta = self._tentar(pergunta)
-            texto = (resposta.text or "").strip()
-            self.historico.extend(
-                [
-                    types.Content(role="user", parts=[types.Part(text=pergunta)]),
-                    types.Content(role="model", parts=[types.Part(text=texto)]),
-                ]
+        except Exception as erro:
+            registro.registrar(
+                pergunta, self.modelo_em_uso, time.monotonic() - inicio,
+                consultas=executadas, erro=f"{type(erro).__name__}: {erro}",
             )
-            return Resposta(texto=texto, consultas=registro)
+            raise
         finally:
             ferramentas.execucao.reset(marca)
+
+        texto = (resposta.text or "").strip()
+        self.historico.extend(
+            [
+                types.Content(role="user", parts=[types.Part(text=pergunta)]),
+                types.Content(role="model", parts=[types.Part(text=texto)]),
+            ]
+        )
+        registro.registrar(
+            pergunta, self.modelo_em_uso, time.monotonic() - inicio,
+            resposta=texto, consultas=executadas,
+        )
+        return Resposta(texto=texto, consultas=executadas)
 
     def _tentar(self, pergunta: str) -> types.GenerateContentResponse:
         """Percorre a cadeia de modelos até um responder."""

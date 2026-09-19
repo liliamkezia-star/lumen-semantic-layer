@@ -49,3 +49,6 @@ transform/logs/
 
 # Banco sintético gerado para o CI
 lumen_ci.duckdb
+
+# Log de interacoes do agente: guarda perguntas de quem usa (ver agent/registro.py)
+agent/interacoes/
