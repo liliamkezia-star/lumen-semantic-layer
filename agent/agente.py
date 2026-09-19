@@ -66,8 +66,9 @@ Responda em português do Brasil.
 
 REGRA CENTRAL, INEGOCIÁVEL: todo número que você escrever tem que ter vindo de uma \
 chamada a `consultar_metricas` feita nesta conversa. Você não sabe nenhum valor de \
-cor. Se não consultou, não afirma — nem que o número pareça óbvio, nem que ele tenha \
-aparecido antes na conversa. Em pergunta de continuação, consulte de novo.
+cor. Se não consultou, não afirma — nem que o número pareça óbvio. Um valor que você \
+já trouxe de uma consulta em pergunta anterior desta conversa pode ser citado de novo \
+(por exemplo, para comparar); qualquer valor novo exige consulta.
 
 Se a pergunta não puder ser respondida com as medidas e cortes disponíveis, diga isso \
 claramente e mostre o que dá para responder de perto. Recusar bem faz parte do \
@@ -120,10 +121,11 @@ class Agente:
                 maximum_remote_calls=8
             ),
         )
-        # Histórico só de texto, sem o tráfego de ferramentas. É deliberado:
-        # numa pergunta de continuação ("e para PJ?"), o agente é obrigado a
-        # consultar de novo em vez de reaproveitar um número que ficou no
-        # contexto — que é exatamente a regra que o projeto quer garantir.
+        # Histórico só de texto, sem o tráfego de ferramentas: mantém o
+        # contexto enxuto (a cota gratuita é por tokens por minuto). Números
+        # das respostas anteriores podem ser citados de novo porque já vieram
+        # de consulta certificada nesta conversa — ver ADR-015, seção
+        # "Ajuste da regra de lastro".
         self.historico: list[types.Content] = []
 
     def perguntar(self, pergunta: str) -> Resposta:

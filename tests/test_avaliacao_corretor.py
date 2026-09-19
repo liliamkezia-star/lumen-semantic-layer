@@ -151,6 +151,62 @@ def test_resposta_que_nao_recusa_reprova():
     assert not v.passou
 
 
+PF = "Taxa de Inadimplência PF"
+PJ = "Taxa de Inadimplência PJ"
+
+
+def agente_em_dois_turnos(primeiro, segundo):
+    class AgenteFalso:
+        def __init__(self):
+            self.respostas = iter([primeiro, segundo])
+
+        def perguntar(self, _pergunta):
+            return next(self.respostas)
+
+    return AgenteFalso
+
+
+@pytest.fixture
+def catalogo_pf_pj(monkeypatch):
+    cat = Catalogo(
+        medidas={n: Medida(nome=n, tabela="f", unidade="fracao") for n in (PF, PJ)}
+    )
+    monkeypatch.setattr(catalogo, "carregar", lambda: cat)
+    monkeypatch.setattr(
+        avaliacao.consultas,
+        "consultar",
+        lambda **_: Resultado(linhas=[{PJ: 0.0249}], dax="", medidas=[PJ]),
+    )
+
+
+CASO_CONTINUACAO = Caso("continuação", ["PF?", "E PJ?"], {"medidas": [PJ]})
+CONSULTA_PF = Resultado(linhas=[{PF: 0.05145}], dax="pf", medidas=[PF])
+CONSULTA_PJ = Resultado(linhas=[{PJ: 0.0249}], dax="pj", medidas=[PJ])
+
+
+def test_numero_certificado_em_turno_anterior_tem_lastro(catalogo_pf_pj):
+    """Regra ajustada em 2026-09-18 (ADR-015): citar de novo um valor já
+    consultado nesta conversa é permitido."""
+    agente = agente_em_dois_turnos(
+        RespostaFalsa("PF é 5,15%.", [CONSULTA_PF]),
+        RespostaFalsa("PJ é 2,49%, contra 5,15% em PF.", [CONSULTA_PJ]),
+    )
+    veredito = avaliacao.avaliar(CASO_CONTINUACAO, agente)
+    assert veredito.passou, veredito
+    assert veredito.consultas == ["pf", "pj"]
+
+
+def test_numero_nunca_consultado_na_conversa_continua_reprovando(catalogo_pf_pj):
+    """O ajuste não abre brecha: valor sem consulta em nenhum turno reprova."""
+    agente = agente_em_dois_turnos(
+        RespostaFalsa("PF é 5,15%.", [CONSULTA_PF]),
+        RespostaFalsa("PJ é 2,49%, e a média do mercado é 3,80%.", [CONSULTA_PJ]),
+    )
+    veredito = avaliacao.avaliar(CASO_CONTINUACAO, agente)
+    assert veredito.sem_lastro == ["3,80"]
+    assert not veredito.passou
+
+
 def test_codigo_de_serie_citado_nao_conta_como_inventado():
     v = avaliacao.avaliar(
         CASO_TAXA,

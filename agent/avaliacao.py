@@ -8,9 +8,10 @@ pytest. Mede três coisas:
 1. Acerto: a resposta traz o valor (e, em ranking, o nome) certo.
 2. Recusa: pergunta fora do catálogo é recusada, não aproximada.
 3. Lastro: todo número escrito na resposta aparece nos resultados das
-   consultas feitas naquele turno. É a regra central do agente medida
+   consultas feitas naquela conversa. É a regra central do agente medida
    diretamente — acertar o número principal e inventar um secundário
-   ainda é falha de governança.
+   ainda é falha de governança. (Até 2026-09-18 o lastro valia só para o
+   turno; ver ADR-015, "Ajuste da regra de lastro".)
 
 O gabarito não é escrito à mão: é calculado na hora pela própria camada
 certificada. Um "4,10%" fixo aqui quebraria no dia em que a Gold ganhar
@@ -123,7 +124,7 @@ def tem_lastro(valor: float, casas: int, lastro: set[float]) -> bool:
     return any(round(certo, casas) == round(valor, casas) for certo in lastro)
 
 
-def lastro_do_turno(resultados: list[consultas.Resultado]) -> set[float]:
+def lastro_da_conversa(resultados: list[consultas.Resultado]) -> set[float]:
     cat = catalogo.carregar()
     lastro: set[float] = set()
     # Números em nomes de medida são identificadores ("SGS 21082"), não
@@ -178,14 +179,16 @@ class Veredito:
 def avaliar(caso: Caso, agente_novo) -> Veredito:
     veredito = Veredito(caso=caso.nome, pergunta=caso.perguntas[-1])
     agente = agente_novo()
+    da_conversa: list[consultas.Resultado] = []
     for pergunta in caso.perguntas:
         resposta = agente.perguntar(pergunta)
+        da_conversa.extend(resposta.consultas)
         time.sleep(PAUSA_ENTRE_TURNOS)
     veredito.resposta = resposta.texto
-    veredito.consultas = [r.dax for r in resposta.consultas]
+    veredito.consultas = [r.dax for r in da_conversa]
     veredito.modelo = getattr(agente, "modelo_em_uso", "")
 
-    lastro = lastro_do_turno(resposta.consultas)
+    lastro = lastro_da_conversa(da_conversa)
     veredito.sem_lastro = [
         f"{v:.{c}f}".replace(".", ",")
         for v, c in extrair_numeros(resposta.texto)
@@ -231,9 +234,11 @@ def main() -> int:
 
     parser = argparse.ArgumentParser(prog="python -m agent.avaliacao")
     parser.add_argument("inicio", nargs="?", type=int, default=1)
+    parser.add_argument("--ate", type=int, default=len(CASOS), help="último caso a rodar")
     parser.add_argument("--modelo", default=None)
     argumentos = parser.parse_args()
     inicio = argumentos.inicio
+    fim = argumentos.ate
     modelo_fixo = argumentos.modelo
 
     def novo_agente() -> Agente:
@@ -242,6 +247,8 @@ def main() -> int:
     for indice, caso in enumerate(CASOS, start=1):
         if indice < inicio:
             continue
+        if indice > fim:
+            break
         print(f"[{indice:>2}/{len(CASOS)}] {caso.nome} ...", end=" ", flush=True)
         veredito = None
         for tentativa in range(1, TENTATIVAS_POR_COTA + 1):
@@ -265,7 +272,7 @@ def main() -> int:
 
     executados = [v for v in vereditos if not v.erro]
     aprovados = sum(v.passou for v in executados)
-    pedidos = len(CASOS) - inicio + 1
+    pedidos = fim - inicio + 1
     print(f"\n{aprovados}/{len(executados)} casos aprovados", end="")
     if len(executados) < pedidos:
         faltam = inicio + len(executados)

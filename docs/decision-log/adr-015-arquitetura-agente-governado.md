@@ -76,16 +76,36 @@ medida `Insight · Concentração da Deterioração`, que interpreta ("a
 deterioração está concentrada em X") em cima de valores certificados.
 
 ### 4. Stack
-- **Modelo**: `claude-opus-5` com adaptive thinking, via o SDK oficial
-  `anthropic` para Python.
-- **Laço do agente**: tool runner do SDK
-  (`client.beta.messages.tool_runner`), com as ferramentas definidas via
-  `@beta_tool` — o laço é do SDK, as ferramentas e a validação são
-  nossas.
+- **Modelo**: Google Gemini pela API gratuita, via o SDK `google-genai`,
+  com execução automática de ferramentas. Cadeia de reserva:
+  `gemini-3.6-flash` → outros Flash → `gemma-4-26b-a4b-it` →
+  `gemma-4-31b-it`. Na avaliação e no benchmark, um modelo fixo
+  (`gemma-4-26b-a4b-it`), sem reserva — ver seção Provedor.
+- **Isolamento do provedor**: só `agent/agente.py` conhece o provedor.
+  Catálogo, validação e montagem de DAX (`catalogo.py`, `consultas.py`,
+  `ferramentas.py`) não sabem qual modelo está do outro lado.
 - **Interface**: app Streamlit, com a lógica do agente isolada em um
   módulo Python reutilizável (a interface não pode ser o único lugar
   onde a regra de governança existe — os testes precisam chamar o mesmo
   caminho).
+
+### Provedor: por que Gemini, e não Claude como na primeira versão
+A primeira versão deste ADR previa `claude-opus-5`. A autora optou por
+custo zero de API, e a troca custou um arquivo, porque a governança não
+depende do provedor. No nível gratuito, os Gemini Flash esgotavam a cota
+em ~3 perguntas; os Gemma 4 (modelos abertos do Google, na mesma API)
+têm cota separada e suportam ferramentas, e viraram o modelo da
+avaliação.
+
+O limite que interrompia as rodadas é **por minuto**, não diário — a
+cota voltava minutos depois. A avaliação espera a janela virar e repete
+o caso, em vez de abortar.
+
+Consequência para o benchmark do plano (Sprints 11–12): a comparação
+agente × text-to-SQL será feita com um modelo aberto e gratuito, não com
+um modelo de ponta. A comparação continua justa — o mesmo modelo nas
+duas abordagens —, mas o resultado mede o ganho da camada semântica
+*para esse modelo*, e o artigo precisa dizer isso.
 
 ## Alternativas consideradas
 - **Text-to-DAX / text-to-SQL livre**: rejeitado. É a abordagem mais
@@ -184,8 +204,8 @@ gateway. Verificar o vínculo pela tela do modelo, não pela API.
   precisa recusar explicitamente e dizer o que **sabe** responder, em
   vez de improvisar — recusar bem é requisito de produto aqui, não caso
   de borda.
-- Dependência nova, a resolver antes de codar: chave de API da
-  Anthropic (não existe nenhuma no projeto hoje).
+- Dependência nova: chave da API do Gemini (`GEMINI_API_KEY` no `.env`,
+  fora do git), no nível gratuito.
 - Dependência operacional herdada, agora com mais um consumidor: o
   client secret do SPN expira (90 dias a partir de 2026-08-25, conforme
   registrado no ADR-008). Até hoje o vencimento derrubaria só o `dbt`;
@@ -198,3 +218,40 @@ gateway. Verificar o vínculo pela tela do modelo, não pela API.
   carteira ativa = R$ 7,44 Tri), para provar que ele não alucina em
   cima de métrica certificada. Sem isso não há como afirmar que o
   agente é governado — só que ele foi projetado para ser.
+
+## Avaliação (2026-09-18)
+`python -m agent.avaliacao --modelo gemma-4-26b-a4b-it`: 16 casos, com
+gabarito calculado na hora pela camada certificada (não escrito à mão,
+para não quebrar quando a Gold ganhar competência nova).
+
+Resultado da primeira rodada completa: **15/16**.
+- 12/12 perguntas factuais com o valor e o DAX certos (valor simples,
+  filtro, competência histórica, rankings de UF/região/modalidade,
+  referência do BCB, Selic).
+- 4/4 recusas corretas (banco, previsão, município, juros), sem número
+  inventado e com a alternativa mais próxima oferecida.
+- 1 falha: o caso de continuação — ver seção abaixo.
+
+Três recusas corretas foram inicialmente reprovadas pelo corretor, que
+não reconhecia "não posso" e "não possuo". Erro do corretor, corrigido e
+coberto por teste com as frases reais do agente.
+
+## Ajuste da regra de lastro (feito depois de uma falha — registrado por isso)
+A regra original mandava o agente **consultar de novo** qualquer número
+numa pergunta de continuação, e o corretor exigia lastro só no turno
+atual. No caso "e de PJ?", o agente consultou o PJ (2,49%) mas comparou
+com os 5,15% de PF da pergunta anterior sem reconsultar. O número estava
+certo — tinha vindo de consulta certificada um turno antes —, mas a regra
+foi desobedecida.
+
+A regra foi relaxada para: **valor já trazido por consulta nesta
+conversa pode ser citado de novo; valor novo exige consulta**. O
+corretor passou a aceitar lastro de qualquer consulta da conversa.
+
+Este ajuste foi feito **depois** de o modelo falhar na regra antiga, o
+que tem aparência de mover a trave para melhorar o placar. O argumento
+precisa valer sem o placar: o risco que a regra existe para evitar é
+citar número **não certificado**, e esse continua bloqueado — há teste
+garantindo que um número nunca consultado em nenhum turno reprova.
+Reconsultar um número já certificado na mesma conversa não aumenta a
+exatidão; só gasta a cota que no nível gratuito é o recurso escasso.
