@@ -86,6 +86,7 @@ CASOS = [
 ]
 
 MARCAS_DE_RECUSA = (
+    "nao posso", "nao possuo",  # faltavam: reprovaram três recusas corretas na 1ª rodada
     "nao e possivel", "nao ha", "nao existe", "nao esta disponivel", "nao estao disponiveis",
     "nao dispoe", "nao consigo", "nao temos", "nao tenho", "nao possui", "nao contempla",
     "nao cobre", "nao permite", "nao inclui", "nao faz parte", "indisponivel", "fora do",

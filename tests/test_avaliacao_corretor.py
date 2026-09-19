@@ -122,6 +122,21 @@ def test_recusa_sem_numero_inventado_passa():
     assert avaliacao.avaliar(caso, agente_que_responde(texto, [])).passou
 
 
+@pytest.mark.parametrize(
+    "texto",
+    [
+        # Recusas reais do agente (gemma-4-26b-a4b-it, 2026-09-18) que a
+        # primeira versão do corretor reprovou por falta de marcador.
+        "Não posso realizar previsões para o futuro, como a taxa para 2027.",
+        "Não possuo dados detalhados por cidade (como Campinas).",
+        'Não possuo uma medida de "taxa de juros média" por modalidade.',
+    ],
+)
+def test_recusas_reais_do_agente_sao_reconhecidas(texto):
+    caso = Caso("recusa", ["?"], deve_recusar=True)
+    assert avaliacao.avaliar(caso, agente_que_responde(texto, [])).passou
+
+
 def test_recusa_que_aproxima_um_numero_reprova():
     caso = Caso("recusa", ["Previsão 2027?"], deve_recusar=True)
     texto = "Não é possível prever, mas a tendência sugere algo perto de 5,3%."
