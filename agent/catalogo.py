@@ -72,6 +72,8 @@ UNIDADES: dict[str, str] = {
     "Carteira Ativa Δ% a/a": "fracao",
     "Carteira Vencida Δ% a/a": "fracao",
     "Ativo Problemático Δ% a/a": "fracao",
+    "IPCA 12 Meses (SGS)": "fracao",  # deflacionamento: ADR-016
+    "Carteira Ativa Δ% a/a Real": "fracao",
     # já em pontos percentuais
     "Taxa de Inadimplência Δpp a/a": "pp",
     "Taxa de Inadimplência PF Δpp a/a": "pp",
@@ -94,6 +96,7 @@ UNIDADES: dict[str, str] = {
     "Carteira Inadimplência": "reais",
     "Ativo Problemático": "reais",
     "Ativo Problemático AA": "reais",
+    "Carteira Ativa Real (R$ da Última Competência)": "reais",
     # séries em milhões de reais
     "SCR (R$ mi)": "reais_milhoes",
     "SGS (R$ mi)": "reais_milhoes",

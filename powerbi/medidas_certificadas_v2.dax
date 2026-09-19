@@ -415,29 +415,86 @@ ROUND ( DIVIDE ( [Carteira Ativa], 1000000000 ), 1 )
 // ---------------------------------------------------------------------
 // 16. PÁGINA 3 (CONTEXTO MACRO) — séries SGS
 // Séries mensais do SGS têm data no PRIMEIRO dia do mês (ex.: 2025-12-01),
-// diferente de fato_credito que usa o ÚLTIMO dia (2025-12-31) — por isso
-// nenhum filtro de data exata é aplicado aqui: a medida só reage ao
-// contexto que o próprio gráfico (small multiples) já estabelece por
-// linha, sem precisar acertar a convenção de dia do mês.
+// diferente de fato_credito que usa o ÚLTIMO dia (2025-12-31). Por isso a
+// âncora é um INTERVALO — do primeiro ao último dia do mês da competência —
+// e não uma data exata: cobre as duas convenções.
+//
+// A primeira versão destas seis medidas usava AVERAGE sem âncora e
+// devolvia a média de todos os meses (Selic ~10% em vez de 15%). A
+// correção foi aplicada ao vivo no modelo na Sprint 8 (numeração do
+// plano) e só foi trazida para este arquivo em 2026-09-18, quando uma
+// comparação das 73 medidas do modelo contra este catálogo achou
+// exatamente estas seis divergindo.
+//
+// Nas séries diárias (Selic meta), a medida é a MÉDIA do mês: num mês em
+// que o Copom mudou a meta, o valor fica entre a meta antiga e a nova.
 // ---------------------------------------------------------------------
 
 Selic Meta (SGS) =
-CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "selic_meta" )
+VAR _Ultima = [Última Competência com Crédito]
+RETURN
+    CALCULATE (
+        AVERAGE ( fato_indicador_macro[valor] ),
+        fato_indicador_macro[nome_serie] = "selic_meta",
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] >= EOMONTH ( _Ultima, -1 ) + 1,
+        dim_calendario[data] <= _Ultima
+    )
 
 Spread Médio (SGS) =
-CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "spread_medio_total" )
+VAR _Ultima = [Última Competência com Crédito]
+RETURN
+    CALCULATE (
+        AVERAGE ( fato_indicador_macro[valor] ),
+        fato_indicador_macro[nome_serie] = "spread_medio_total",
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] >= EOMONTH ( _Ultima, -1 ) + 1,
+        dim_calendario[data] <= _Ultima
+    )
 
 Endividamento das Famílias (SGS) =
-CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "endividamento_familias" )
+VAR _Ultima = [Última Competência com Crédito]
+RETURN
+    CALCULATE (
+        AVERAGE ( fato_indicador_macro[valor] ),
+        fato_indicador_macro[nome_serie] = "endividamento_familias",
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] >= EOMONTH ( _Ultima, -1 ) + 1,
+        dim_calendario[data] <= _Ultima
+    )
 
 Crédito/PIB (SGS) =
-CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "credito_pib" )
+VAR _Ultima = [Última Competência com Crédito]
+RETURN
+    CALCULATE (
+        AVERAGE ( fato_indicador_macro[valor] ),
+        fato_indicador_macro[nome_serie] = "credito_pib",
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] >= EOMONTH ( _Ultima, -1 ) + 1,
+        dim_calendario[data] <= _Ultima
+    )
 
 Concessões PF (SGS) =
-CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "concessoes_pf_total" )
+VAR _Ultima = [Última Competência com Crédito]
+RETURN
+    CALCULATE (
+        AVERAGE ( fato_indicador_macro[valor] ),
+        fato_indicador_macro[nome_serie] = "concessoes_pf_total",
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] >= EOMONTH ( _Ultima, -1 ) + 1,
+        dim_calendario[data] <= _Ultima
+    )
 
 Concessões PJ (SGS) =
-CALCULATE ( AVERAGE ( fato_indicador_macro[valor] ), fato_indicador_macro[nome_serie] = "concessoes_pj_total" )
+VAR _Ultima = [Última Competência com Crédito]
+RETURN
+    CALCULATE (
+        AVERAGE ( fato_indicador_macro[valor] ),
+        fato_indicador_macro[nome_serie] = "concessoes_pj_total",
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] >= EOMONTH ( _Ultima, -1 ) + 1,
+        dim_calendario[data] <= _Ultima
+    )
 
 // Medida genérica pro gráfico de pequenos múltiplos (Small Multiples) —
 // reage ao filtro de nome_serie que o próprio campo "Pequenos múltiplos"
@@ -688,3 +745,61 @@ RETURN
     "A deterioração está concentrada em " & _TopModalidade & " (" & SUBSTITUTE ( FORMAT ( _TopDelta, "+0.0" ), ".", "," ) & " pp) e em pessoa física ("
         & SUBSTITUTE ( FORMAT ( [Taxa de Inadimplência PF Δpp a/a], "+0.0" ), ".", "," ) & " pp vs "
         & SUBSTITUTE ( FORMAT ( [Taxa de Inadimplência PJ Δpp a/a], "+0.0" ), ".", "," ) & " pp em PJ)."
+
+// ---------------------------------------------------------------------
+// 17. DEFLACIONAMENTO PELO IPCA (ADR-016)
+// Criadas em 2026-09-18, ANTES de o gabarito de 60 perguntas da Sprint 11
+// ser escrito e congelado — ver ADR-016 sobre o risco de "estudar para a
+// prova". Validadas contra cálculo independente em SQL na Gold (SQL
+// endpoint): IPCA 2025 = 4,26%, crescimento real da carteira em 2025 =
+// 6,75%, carteira de dez/2020 a preços de dez/2025 = R$ 5,60 Tri — os dois
+// caminhos batem até a sexta casa decimal.
+//
+// A série ipca_mensal é variação no mês em % (SGS 433), com data no
+// primeiro dia do mês. Inflação acumulada é o PRODUTO de (1 + v/100), nunca
+// a soma das variações — a pegadinha que estas medidas existem para evitar.
+// ---------------------------------------------------------------------
+
+IPCA 12 Meses (SGS) =
+VAR _Atual = [Última Competência com Crédito]
+VAR _Meses =
+    CALCULATETABLE (
+        fato_indicador_macro,
+        fato_indicador_macro[nome_serie] = "ipca_mensal",
+        REMOVEFILTERS ( dim_calendario ),
+        dim_calendario[data] >= EOMONTH ( _Atual, -12 ) + 1,
+        dim_calendario[data] <= _Atual
+    )
+RETURN
+    IF (
+        COUNTROWS ( _Meses ) = 12,
+        PRODUCTX ( _Meses, 1 + fato_indicador_macro[valor] / 100 ) - 1
+    )
+
+Carteira Ativa Δ% a/a Real =
+VAR _Nominal = [Carteira Ativa Δ% a/a]
+VAR _Ipca = [IPCA 12 Meses (SGS)]
+RETURN
+    IF (
+        NOT ISBLANK ( _Nominal ) && NOT ISBLANK ( _Ipca ),
+        DIVIDE ( 1 + _Nominal, 1 + _Ipca ) - 1
+    )
+
+// Base de preços = última competência com crédito GLOBAL (REMOVEFILTERS),
+// não a do filtro: "dez/2020 em reais de hoje" precisa de um "hoje" fixo.
+Carteira Ativa Real (R$ da Última Competência) =
+VAR _Atual = [Última Competência com Crédito]
+VAR _Base = CALCULATE ( [Última Competência com Crédito], REMOVEFILTERS ( dim_calendario ) )
+VAR _Fator =
+    PRODUCTX (
+        CALCULATETABLE (
+            fato_indicador_macro,
+            fato_indicador_macro[nome_serie] = "ipca_mensal",
+            REMOVEFILTERS ( dim_calendario ),
+            dim_calendario[data] > _Atual,
+            dim_calendario[data] <= _Base
+        ),
+        1 + fato_indicador_macro[valor] / 100
+    )
+RETURN
+    [Carteira Ativa] * IF ( _Atual >= _Base, 1, _Fator )

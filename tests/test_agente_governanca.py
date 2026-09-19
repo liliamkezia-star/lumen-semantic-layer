@@ -174,6 +174,10 @@ def test_limite_e_teto_de_seguranca(modelo_falso):
         ("Defasagem SCR vs SGS (meses)", 7, "7 meses"),
         ("Última Competência com Crédito", "2025-12-31T00:00:00", "31/12/2025"),
         ("Carteira Ativa", None, "sem valor"),
+        # Deflacionamento (ADR-016), valores conferidos em SQL independente
+        ("IPCA 12 Meses (SGS)", 0.042644, "4,26%"),
+        ("Carteira Ativa Δ% a/a Real", 0.067459, "6,75%"),
+        ("Carteira Ativa Real (R$ da Última Competência)", 5597036846992.1, "R$ 5,60 Tri"),
     ],
 )
 def test_formatacao_segue_a_unidade_declarada(medida, valor, esperado):
