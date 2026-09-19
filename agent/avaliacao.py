@@ -35,6 +35,11 @@ from . import catalogo, consultas
 from .ferramentas import formatar
 
 PAUSA_ENTRE_TURNOS = 6  # segundos; o nível gratuito limita requisições por minuto
+# O limite que interrompia as rodadas era por minuto, não por dia (medido:
+# a cota esgotava sempre após ~3 casos e voltava minutos depois). Então,
+# ao esgotar, espera a janela virar e repete o caso, em vez de abortar.
+ESPERA_POR_COTA = 70  # segundos
+TENTATIVAS_POR_COTA = 6
 RESULTADOS = Path(__file__).parent / "avaliacao_resultados"
 
 TAXA = "Taxa de Inadimplência (SCR.data)"
@@ -237,11 +242,21 @@ def main() -> int:
         if indice < inicio:
             continue
         print(f"[{indice:>2}/{len(CASOS)}] {caso.nome} ...", end=" ", flush=True)
-        try:
-            veredito = avaliar(caso, novo_agente)
-        except ModelosIndisponiveis as erro:
-            print("interrompido: nenhum modelo disponível.")
-            vereditos.append(Veredito(caso=caso.nome, pergunta=caso.perguntas[-1], erro=str(erro)))
+        veredito = None
+        for tentativa in range(1, TENTATIVAS_POR_COTA + 1):
+            try:
+                veredito = avaliar(caso, novo_agente)
+                break
+            except ModelosIndisponiveis as erro:
+                ultimo_erro = str(erro)
+                if tentativa < TENTATIVAS_POR_COTA:
+                    print(f"(sem cota, aguardando {ESPERA_POR_COTA}s)", end=" ", flush=True)
+                    time.sleep(ESPERA_POR_COTA)
+        if veredito is None:
+            print("interrompido: nenhum modelo disponível mesmo após esperar.")
+            vereditos.append(
+                Veredito(caso=caso.nome, pergunta=caso.perguntas[-1], erro=ultimo_erro)
+            )
             break
         vereditos.append(veredito)
         detalhe = f" (sem lastro: {', '.join(veredito.sem_lastro)})" if veredito.sem_lastro else ""
