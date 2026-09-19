@@ -1,10 +1,10 @@
 {
-  "verificado_em": "2026-09-18T23:36:34-03:00",
+  "verificado_em": "2026-09-18T23:45:28-03:00",
   "perguntas": [
     {
       "id": "A01",
       "categoria": "A",
-      "pergunta": "Qual era a carteira de crédito ativa em dezembro de 2025?",
+      "pergunta": "Segundo o SCR.data, qual era a carteira de crédito ativa em dezembro de 2025?",
       "tipo": "valor",
       "unidade": "reais",
       "esperado": {
@@ -20,7 +20,7 @@
     {
       "id": "A02",
       "categoria": "A",
-      "pergunta": "Qual era a taxa de inadimplência do crédito em dezembro de 2025?",
+      "pergunta": "Segundo o SCR.data, qual era a taxa de inadimplência do crédito em dezembro de 2025?",
       "tipo": "valor",
       "unidade": "fracao",
       "esperado": {
@@ -244,7 +244,7 @@
     {
       "id": "B06",
       "categoria": "B",
-      "pergunta": "Qual era a taxa de inadimplência em dezembro de 2020?",
+      "pergunta": "Segundo o SCR.data, qual era a taxa de inadimplência em dezembro de 2020?",
       "tipo": "valor",
       "unidade": "fracao",
       "esperado": {
@@ -260,7 +260,7 @@
     {
       "id": "B07",
       "categoria": "B",
-      "pergunta": "Qual era a carteira de crédito ativa em junho de 2018?",
+      "pergunta": "Segundo o SCR.data, qual era a carteira de crédito ativa em junho de 2018?",
       "tipo": "valor",
       "unidade": "reais",
       "esperado": {
@@ -514,7 +514,7 @@
     {
       "id": "D01",
       "categoria": "D",
-      "pergunta": "Qual foi a carteira de crédito ativa em 2024?",
+      "pergunta": "Segundo o SCR.data, qual foi a carteira de crédito ativa em 2024?",
       "tipo": "valor",
       "unidade": "reais",
       "esperado": {
@@ -530,7 +530,7 @@
     {
       "id": "D02",
       "categoria": "D",
-      "pergunta": "Qual foi a carteira de crédito ativa em 2020?",
+      "pergunta": "Segundo o SCR.data, qual foi a carteira de crédito ativa em 2020?",
       "tipo": "valor",
       "unidade": "reais",
       "esperado": {
@@ -546,7 +546,7 @@
     {
       "id": "D03",
       "categoria": "D",
-      "pergunta": "Em quantos por cento a carteira de crédito ativa cresceu entre dezembro de 2024 e dezembro de 2025?",
+      "pergunta": "Segundo o SCR.data, em quantos por cento a carteira de crédito ativa cresceu entre dezembro de 2024 e dezembro de 2025?",
       "tipo": "valor",
       "unidade": "fracao",
       "esperado": {
@@ -562,7 +562,7 @@
     {
       "id": "D04",
       "categoria": "D",
-      "pergunta": "Qual era a taxa de inadimplência no fim de 2024?",
+      "pergunta": "Segundo o SCR.data, qual era a taxa de inadimplência no fim de 2024?",
       "tipo": "valor",
       "unidade": "fracao",
       "esperado": {
@@ -610,7 +610,7 @@
     {
       "id": "D07",
       "categoria": "D",
-      "pergunta": "Em quantos pontos percentuais a taxa de inadimplência variou entre dezembro de 2024 e dezembro de 2025?",
+      "pergunta": "Segundo o SCR.data, em quantos pontos percentuais a taxa de inadimplência variou entre dezembro de 2024 e dezembro de 2025?",
       "tipo": "valor",
       "unidade": "pp",
       "esperado": {
@@ -658,7 +658,7 @@
     {
       "id": "D10",
       "categoria": "D",
-      "pergunta": "Qual foi a taxa de inadimplência ao fim de cada trimestre de 2025?",
+      "pergunta": "Segundo o SCR.data, qual foi a taxa de inadimplência ao fim de cada trimestre de 2025?",
       "tipo": "valores",
       "unidade": "fracao",
       "esperado": {
@@ -702,7 +702,7 @@
     {
       "id": "E02",
       "categoria": "E",
-      "pergunta": "Descontada a inflação, quanto a carteira de crédito ativa cresceu entre dezembro de 2024 e dezembro de 2025?",
+      "pergunta": "Segundo o SCR.data e descontada a inflação, quanto a carteira de crédito ativa cresceu entre dezembro de 2024 e dezembro de 2025?",
       "tipo": "valor",
       "unidade": "fracao",
       "esperado": {
@@ -718,7 +718,7 @@
     {
       "id": "E03",
       "categoria": "E",
-      "pergunta": "Quanto valeria a carteira de crédito ativa de dezembro de 2020 em reais de dezembro de 2025?",
+      "pergunta": "Segundo o SCR.data, quanto valeria a carteira de crédito ativa de dezembro de 2020 em reais de dezembro de 2025?",
       "tipo": "valor",
       "unidade": "reais",
       "esperado": {
@@ -830,7 +830,7 @@
     {
       "id": "E10",
       "categoria": "E",
-      "pergunta": "Descontada a inflação, quanto a carteira de crédito ativa cresceu entre dezembro de 2020 e dezembro de 2021?",
+      "pergunta": "Segundo o SCR.data e descontada a inflação, quanto a carteira de crédito ativa cresceu entre dezembro de 2020 e dezembro de 2021?",
       "tipo": "valor",
       "unidade": "fracao",
       "esperado": {

@@ -102,6 +102,28 @@ de rede) não conta como erro nem acerto: é repetida.
   o gabarito deliberadamente não aplica, porque a pergunta não pede.
 - **Medidas deflacionadas foram criadas antes do gabarito** (ADR-016).
 
+## Registro de alterações
+Toda mudança no gabarito ou nos critérios fica aqui, com data e motivo.
+
+**2026-09-18 — antes de qualquer rodada do benchmark.** Um teste de
+fumaça do baseline (3 perguntas, sem medir nada) mostrou que 13
+perguntas sobre agregados nacionais tinham duas respostas razoáveis: a
+taxa calculada do SCR.data (4,10%) e a série oficial do BCB (4,20%); a
+carteira do SCR (R$ 7,44 Tri) e o saldo do SGS (R$ 7,14 Tri). O baseline
+respondeu com a série oficial, o que é defensável. As 13 passaram a
+citar a fonte ("Segundo o SCR.data, ..."). A mudança diz o que está
+sendo perguntado, não como calcular, e vale igual para as duas
+abordagens. As respostas esperadas não mudaram.
+
+No mesmo teste, foram corrigidas descrições erradas da documentação da
+Gold (`schema.yml` do dbt), que o baseline recebe como referência: a
+coluna `numero_de_operacoes` era descrita como aditiva no tempo (é
+estoque), e `segmento` e `porte` tinham exemplos que não correspondiam
+aos valores reais. Também foi documentada a convenção de data (crédito
+no último dia do mês, séries SGS mensais no primeiro). Sem essas
+correções, o baseline seria penalizado por seguir uma documentação
+errada.
+
 ## Limitações conhecidas
 - Um modelo só, e aberto: o resultado não se generaliza para modelos de
   ponta sem nova rodada.

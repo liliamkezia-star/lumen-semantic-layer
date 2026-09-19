@@ -20,10 +20,13 @@ SERVIDOR = os.getenv(
 BANCO = os.getenv("LUMEN_LAKEHOUSE", "lumen_lakehouse")
 
 
+TEMPO_MAXIMO_S = 90
+
+
 @lru_cache(maxsize=1)
 def _conexao() -> pyodbc.Connection:
     cred = _credenciais()
-    return pyodbc.connect(
+    conexao = pyodbc.connect(
         "Driver={ODBC Driver 18 for SQL Server};"
         f"Server={SERVIDOR},1433;Database={BANCO};"
         "Encrypt=yes;TrustServerCertificate=no;"
@@ -31,11 +34,20 @@ def _conexao() -> pyodbc.Connection:
         f"UID={cred['client_id']};PWD={cred['client_secret']};",
         timeout=60,
     )
+    conexao.timeout = TEMPO_MAXIMO_S  # por consulta, não só pela conexão
+    return conexao
 
 
-def executar_sql(consulta: str) -> list[dict[str, Any]]:
-    """Executa uma consulta e devolve as linhas como dicionários."""
+def executar_sql(consulta: str, limite: int | None = None) -> list[dict[str, Any]]:
+    """Executa uma consulta e devolve as linhas como dicionários.
+
+    `limite` corta o resultado no lado do cliente: o baseline não pode
+    trazer 34 milhões de linhas por engano.
+    """
     cursor = _conexao().cursor()
     cursor.execute(consulta)
+    if cursor.description is None:
+        return []
     colunas = [c[0] for c in cursor.description]
-    return [dict(zip(colunas, linha, strict=True)) for linha in cursor.fetchall()]
+    linhas = cursor.fetchmany(limite) if limite else cursor.fetchall()
+    return [dict(zip(colunas, linha, strict=True)) for linha in linhas]
