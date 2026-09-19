@@ -255,3 +255,9 @@ citar número **não certificado**, e esse continua bloqueado — há teste
 garantindo que um número nunca consultado em nenhum turno reprova.
 Reconsultar um número já certificado na mesma conversa não aumenta a
 exatidão; só gasta a cota que no nível gratuito é o recurso escasso.
+
+Com a regra ajustada, o caso de continuação foi rodado de novo e passou:
+o agente consultou o PJ (2,49%) e a competência, e citou os 5,15% de PF
+da consulta feita na primeira pergunta da conversa. **Placar honesto:
+15/16 pela regra original, 16/16 pela regra ajustada** — os dois números
+ficam registrados, e não só o melhor.
