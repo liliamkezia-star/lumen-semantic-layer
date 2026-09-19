@@ -11,12 +11,13 @@ Provedor atual: Google Gemini (ver ADR-015).
 from __future__ import annotations
 
 import os
+import time
 from dataclasses import dataclass, field
 
 from google import genai
 from google.genai import errors, types
 
-from . import catalogo, consultas, ferramentas
+from . import catalogo, consultas, ferramentas, registro
 
 # Versões fixadas de propósito, em vez do alias `gemini-flash-latest`: um
 # modelo que muda sozinho embaixo do projeto tornaria a avaliação do
@@ -129,20 +130,32 @@ class Agente:
         self.historico: list[types.Content] = []
 
     def perguntar(self, pergunta: str) -> Resposta:
-        registro: list[consultas.Resultado] = []
-        marca = ferramentas.execucao.set(registro)
+        executadas: list[consultas.Resultado] = []
+        marca = ferramentas.execucao.set(executadas)
+        inicio = time.monotonic()
         try:
             resposta = self._tentar(pergunta)
-            texto = (resposta.text or "").strip()
-            self.historico.extend(
-                [
-                    types.Content(role="user", parts=[types.Part(text=pergunta)]),
-                    types.Content(role="model", parts=[types.Part(text=texto)]),
-                ]
+        except Exception as erro:
+            registro.registrar(
+                pergunta, self.modelo_em_uso, time.monotonic() - inicio,
+                consultas=executadas, erro=f"{type(erro).__name__}: {erro}",
             )
-            return Resposta(texto=texto, consultas=registro)
+            raise
         finally:
             ferramentas.execucao.reset(marca)
+
+        texto = (resposta.text or "").strip()
+        self.historico.extend(
+            [
+                types.Content(role="user", parts=[types.Part(text=pergunta)]),
+                types.Content(role="model", parts=[types.Part(text=texto)]),
+            ]
+        )
+        registro.registrar(
+            pergunta, self.modelo_em_uso, time.monotonic() - inicio,
+            resposta=texto, consultas=executadas,
+        )
+        return Resposta(texto=texto, consultas=executadas)
 
     def _tentar(self, pergunta: str) -> types.GenerateContentResponse:
         """Percorre a cadeia de modelos até um responder."""
