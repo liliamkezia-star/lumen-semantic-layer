@@ -1,8 +1,8 @@
 # Lumen — Camada Semântica "AI-Ready" + Agente Analítico Governado
 
-> 🚧 Projeto em desenvolvimento. Sprints 1-7 concluídas (engenharia de
-> dados, migração para Microsoft Fabric, modelo semântico e dashboard
-> Power BI).
+> 🚧 Projeto em desenvolvimento — 8 de 12 sprints do plano entregues:
+> engenharia de dados, migração para Microsoft Fabric, modelo semântico,
+> dashboard Power BI e agente analítico governado.
 
 ## Visão
 
@@ -14,10 +14,22 @@ métricas certificadas — sem gerar SQL/DAX livre.
 
 ## Status atual
 
-- **Concluído:** Sprints 1-5 (ingestão, Silver, star schema Gold), Sprint 6
-  (migração para Microsoft Fabric + modelo semântico Direct Lake) e Sprint 7
-  (dashboard Power BI de 5 páginas, a partir de uma auditoria externa de
-  design — `ADR-010` a `ADR-014`)
+O projeto segue um plano de 12 sprints:
+
+| Sprint | Entrega | Status |
+|---|---|---|
+| 1–5 | Fundação, Bronze, Silver, Gold (star schema em dbt) | ✅ |
+| 6 | Modelo semântico Direct Lake + medidas certificadas | ✅ |
+| 7 | AI-readiness: sinônimos, BPA na CI, RLS | ⏸️ adiada — RLS conflita com o agente (ver [ADR-015](docs/decision-log/adr-015-arquitetura-agente-governado.md)) |
+| 8 | Dashboard Power BI (5 páginas) | ✅ |
+| 9 | ML explicável: previsão de inadimplência e anomalias | ⬜ |
+| 10 | Agente analítico governado | ✅ |
+| 11 | Gabarito de 60 perguntas + baseline text-to-SQL | ⬜ |
+| 12 | Benchmark agente × text-to-SQL e lançamento | ⬜ |
+
+- **Nota sobre numeração:** ADRs e commits anteriores a setembro de 2026
+  chamam o dashboard de "Sprint 7" e o agente de "Sprint 8". A numeração
+  acima é a do plano original, que passa a valer daqui em diante.
 - **Deliberadamente fora de escopo:** faixa sombreada da defasagem SCR/SGS
   na Página 3 e layout mobile da Página 1 — cortes conscientes, não
   esquecimentos (ver seção [Dashboard](#dashboard))
@@ -32,9 +44,10 @@ métricas certificadas — sem gerar SQL/DAX livre.
 | Gold | Star schema com 4 dimensões e 2 fatos (~34,4M linhas no fato principal) — dbt rodando sobre o Fabric via `dbt-fabricspark` |
 | Modelo semântico | `lumen_semantico`, Direct Lake, catálogo de medidas certificadas versionado em `powerbi/medidas_certificadas_v2.dax`, publicado no workspace `lumen-dev` |
 | Dashboard | Power BI de 5 páginas sobre o modelo semântico — tema (`powerbi/lumen_theme_v2.json`), visuais Deneb versionados em `powerbi/deneb/` (ver seção [Dashboard](#dashboard)) |
+| Agente | Perguntas em português respondidas com as medidas certificadas, sem DAX livre, com interface Streamlit autenticada (ver seção [Agente analítico](#agente-analítico)) |
 
-**Qualidade:** 20 testes pytest + 23 testes dbt, todos passando tanto no
-target local (DuckDB) quanto no Fabric.
+**Qualidade:** 86 testes pytest (dados, governança do agente e corretor
+da avaliação) + 23 testes dbt, rodando na CI a cada PR.
 
 **Validação:** reconciliação do total agregado do SCR.data com a série
 oficial do BCB realizada — convergência com divergência metodológica
@@ -44,7 +57,8 @@ documentada (ver `docs/data-dictionary.md`).
 
 Python, dbt, GitHub Actions, Microsoft Fabric (Lakehouse + Direct Lake),
 Power BI (Direct Lake + tema customizado) e Deneb/Vega-Lite para o único
-visual não-nativo do dashboard. Execução local com DuckDB permanece
+visual não-nativo do dashboard. O agente usa a API gratuita do Google
+(Gemini e Gemma 4) e Streamlit. Execução local com DuckDB permanece
 disponível como target de desenvolvimento/CI (ver ADR-001 e ADR-008 para
 o histórico da migração).
 
@@ -91,6 +105,59 @@ o histórico da migração).
    rótulo da linha de referência do BCB, que já dão a escala) resolve o
    alinhamento de um jeito que não depende de nenhuma medida em pixels.
 
+## Agente analítico
+
+Responde perguntas em português sobre crédito no Brasil usando **só** as
+medidas certificadas do modelo semântico. O modelo de linguagem nunca
+escreve DAX: ele escolhe, de listas fechadas, uma medida, cortes (UF,
+modalidade, cliente, competência...) e valores, e o código monta a
+consulta de forma determinística.
+
+```
+pergunta ──▶ LLM escolhe medida + cortes ──▶ validação contra o catálogo ──▶ DAX montado por código
+                        ▲                            │ inválido: recusa com as opções válidas
+                        └──── resultado formatado ◀──┴── executeQueries no lumen_semantico
+```
+
+**O que isso garante, e como foi medido** (avaliação de 2026-09-18, 16
+casos, modelo `gemma-4-26b-a4b-it`, gabarito calculado na hora pela
+própria camada certificada):
+
+- **12/12** perguntas factuais com valor e DAX certos — taxa atual,
+  filtro por UF, competência histórica, rankings, referência do BCB.
+- **4/4** recusas corretas — banco, previsão, município, juros — sem
+  número inventado e oferecendo o que dá para responder.
+- **Lastro:** todo número da resposta tem que ter vindo de uma consulta
+  na conversa. Placar: 15/16 pela regra original, 16/16 depois de um
+  ajuste feito *após* a falha — o motivo está registrado no ADR-015.
+
+Detalhes das proteções em [`agent/guardrails.md`](agent/guardrails.md).
+Decisões e o diagnóstico de acesso ao modelo (por que a conexão usa
+identidade fixa, sem SSO) em
+[ADR-015](docs/decision-log/adr-015-arquitetura-agente-governado.md).
+
+### Como rodar
+
+Crie um `.env` na raiz (fora do git) com:
+
+```
+GEMINI_API_KEY=...          # gratuita em https://aistudio.google.com/apikey
+LUMEN_SENHA_DEMO=...        # senha de entrada da demonstração
+```
+
+As credenciais do Fabric vêm do `~/.dbt/profiles.yml` (o mesmo SPN do
+dbt) ou das variáveis `FABRIC_TENANT_ID`, `FABRIC_CLIENT_ID` e
+`FABRIC_CLIENT_SECRET`.
+
+```bash
+streamlit run agent/app.py                              # interface
+python -m agent.avaliacao --modelo gemma-4-26b-a4b-it   # avaliação (consome cota da API)
+```
+
+Usa o nível gratuito da API: com cota esgotada, o agente passa para o
+próximo modelo da cadeia de reserva, e a avaliação espera a janela de
+cota virar.
+
 ## Decisões técnicas (ADRs)
 
 As decisões de arquitetura são documentadas em `docs/decision-log/`
@@ -127,6 +194,11 @@ predefinida.
   dinâmica (medidas do dumbbell da Página 1) — mesma classe de erro do
   ADR-010/011, agora com literal `DATE(...)` em vez de time intelligence
   sem âncora
+- **ADR-015**: Arquitetura do agente governado — o LLM escolhe medidas de
+  um catálogo fechado e o DAX é montado por código; conexão do modelo com
+  identidade fixa (entidade de serviço não é aceita com SSO); troca de
+  Claude para Gemini/Gemma pelo custo zero; resultado da avaliação e o
+  ajuste da regra de lastro feito depois de uma falha
 
 ## Estrutura do projeto
 
@@ -140,7 +212,9 @@ fabric/notebooks/ → notebooks PySpark (Bronze + Silver) para rodar no
 tests/ → testes de qualidade (pytest) e utilitários de CI
 docs/ → dicionário de dados, ADRs, arquitetura
 powerbi/ → catálogo de medidas DAX, tema do relatório e specs Deneb
-  (Vega-Lite) do dashboard da Sprint 7
+  (Vega-Lite) do dashboard (Sprint 8)
+agent/ → agente analítico (Sprint 10): acesso ao modelo, catálogo,
+  consulta governada, ferramentas, interface, avaliação e guardrails
 
 ## Fontes de dados
 

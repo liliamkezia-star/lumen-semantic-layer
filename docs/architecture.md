@@ -17,6 +17,24 @@ SCR.data ZIP (BCB) ──▶ scr_data_raw ──▶ credito_uf_modalidade ─┤
 API IBGE ──▶ ibge_*_raw ──▶ localidade, │ 4 dimensões + 2 fatos    (Direct Lake,
 populacao_uf ─┘                          lumen_semantico)
 
+### Consumo do modelo semântico
+
+O `lumen_semantico` tem dois consumidores, e nenhum deles recalcula
+métrica — os dois leem as mesmas medidas certificadas:
+
+```
+                          ┌──▶ dashboard Power BI (live connection, 5 páginas)
+modelo semântico ─────────┤
+(lumen_semantico)         └──▶ agente analítico (agent/)
+                                  │  API executeQueries, identidade fixa (SPN)
+                                  │  LLM escolhe medida + cortes de lista fechada
+                                  └▶ DAX montado por código em agent/consultas.py
+```
+
+O agente não tem acesso à Gold nem ao SQL endpoint: só ao modelo
+semântico. Qualquer correção de medida feita no modelo vale ao mesmo
+tempo para o dashboard e para o agente. Ver ADR-015.
+
 ## Princípios arquiteturais
 
 - **Bronze é append-only** (ADR-003): nenhum dado histórico é apagado;
@@ -25,6 +43,9 @@ populacao_uf ─┘                          lumen_semantico)
   acontece antes da Gold; limpeza e tipagem apenas.
 - **Gold é modelada como star schema**, construída via dbt, com chaves
   substitutas (surrogate keys) e integridade referencial testada.
+- **O modelo de linguagem não escreve consulta** (ADR-015): o agente
+  escolhe medidas e cortes de um catálogo fechado; o DAX é montado de
+  forma determinística e validado antes de executar.
 - **Toda decisão de arquitetura é documentada como ADR** em
   `docs/decision-log/`, incluindo correções feitas ao longo do
   desenvolvimento.
@@ -37,6 +58,7 @@ populacao_uf ─┘                          lumen_semantico)
 | Ingestão/transformação | Notebooks PySpark (`fabric/notebooks/`) | Scripts Python (`ingestion/`, `transform/silver/`) |
 | Gold | dbt via `dbt-fabricspark` (`--target fabric`) | dbt via `dbt-duckdb` (`--target dev`) |
 | Modelo semântico | Power BI / Direct Lake (`lumen_semantico`) | — |
+| Agente | API gratuita do Google (Gemini/Gemma 4) + Streamlit (`agent/`) | Testes de governança com catálogo e DAX simulados |
 | Orquestração | Execução manual dos notebooks (pipelines Fabric ainda não adotados) | Execução manual |
 | CI/CD | GitHub Actions (roda contra DuckDB sintético) | GitHub Actions |
 
