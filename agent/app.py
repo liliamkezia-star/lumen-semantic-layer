@@ -9,18 +9,54 @@ de que a resposta veio de medida certificada, e não de texto plausível.
 
 from __future__ import annotations
 
+import hmac
+import os
+import time
+
 import streamlit as st
 
 from agent import catalogo
-from agent.agente import MODELO, Agente, ChaveAusente
+from agent.agente import MODELO, RESERVAS, Agente, ChaveAusente, ModelosIndisponiveis
 from agent.fabric import ErroFabric
 
 st.set_page_config(page_title="Lumen · Agente analítico", layout="wide")
 
 
-@st.cache_resource
+def _exigir_senha() -> None:
+    """Porta de entrada da demonstração.
+
+    Sem senha configurada o app não abre: um app que lê o modelo semântico
+    com a identidade do SPN não pode ficar aberto por esquecimento.
+    """
+    senha = os.getenv("LUMEN_SENHA_DEMO")
+    if not senha:
+        st.error(
+            "Demonstração sem senha configurada. Defina LUMEN_SENHA_DEMO no .env "
+            "da raiz do repositório e reinicie o app."
+        )
+        st.stop()
+    if st.session_state.get("autenticado"):
+        return
+    with st.form("entrada"):
+        tentativa = st.text_input("Senha da demonstração", type="password")
+        if st.form_submit_button("Entrar"):
+            if hmac.compare_digest(tentativa.encode(), senha.encode()):
+                st.session_state.autenticado = True
+                st.rerun()
+            st.error("Senha incorreta.")
+    st.stop()
+
+
+_exigir_senha()
+
+
 def _agente() -> Agente:
-    return Agente()
+    """Um agente por sessão, não um para o processo inteiro: o agente
+    guarda o histórico da conversa, e compartilhá-lo misturaria as
+    conversas de pessoas diferentes."""
+    if "agente" not in st.session_state:
+        st.session_state.agente = Agente()
+    return st.session_state.agente
 
 
 @st.cache_data(ttl=3600)
@@ -46,7 +82,10 @@ with st.sidebar:
     except ErroFabric as erro:
         st.error(f"Sem acesso ao modelo semântico: {erro}")
     st.divider()
-    st.caption(f"Modelo: `{MODELO}`")
+    st.caption(
+        f"Modelo preferido: `{MODELO}`, com {len(RESERVAS)} reservas gratuitas. "
+        "Cada resposta indica o modelo que de fato respondeu."
+    )
     st.caption("Fonte: SCR.data e SGS (Banco Central), IBGE")
     st.caption("Arquitetura: ADR-015")
 
@@ -64,20 +103,28 @@ if not st.session_state.mensagens:
     st.write("**Exemplos para começar**")
     colunas = st.columns(len(EXEMPLOS))
     for coluna, exemplo in zip(colunas, EXEMPLOS, strict=True):
-        if coluna.button(exemplo, use_container_width=True):
+        if coluna.button(exemplo, width="stretch"):
             st.session_state.pergunta_pendente = exemplo
             st.rerun()
 
+def _mostrar(mensagem: dict) -> None:
+    st.markdown(mensagem["texto"])
+    if mensagem.get("modelo"):
+        # O modelo que de fato respondeu, não o preferido: a cadeia de
+        # reserva pode ter caído para outro.
+        st.caption(f"Respondido por `{mensagem['modelo']}` em {mensagem['latencia']:.0f} s")
+    for consulta in mensagem.get("consultas", []):
+        with st.expander(
+            f"Consulta executada · {', '.join(consulta['medidas'])}", expanded=False
+        ):
+            st.code(consulta["dax"], language="sql")
+            if consulta["linhas"]:
+                st.dataframe(consulta["linhas"], width="stretch")
+
+
 for mensagem in st.session_state.mensagens:
     with st.chat_message(mensagem["papel"]):
-        st.markdown(mensagem["texto"])
-        for consulta in mensagem.get("consultas", []):
-            with st.expander(
-                f"Consulta executada · {', '.join(consulta['medidas'])}", expanded=False
-            ):
-                st.code(consulta["dax"], language="sql")
-                if consulta["linhas"]:
-                    st.dataframe(consulta["linhas"], use_container_width=True)
+        _mostrar(mensagem)
 
 pergunta = st.chat_input("Pergunte sobre crédito no Brasil") or st.session_state.pop(
     "pergunta_pendente", None
@@ -89,29 +136,34 @@ if pergunta:
         st.markdown(pergunta)
 
     with st.chat_message("assistant"):
+        inicio = time.monotonic()
         try:
             with st.spinner("Consultando o modelo semântico..."):
-                resposta = _agente().perguntar(pergunta)
+                agente = _agente()
+                resposta = agente.perguntar(pergunta)
         except ChaveAusente as erro:
             st.error(str(erro))
             st.stop()
         except ErroFabric as erro:
             st.error(f"Falha ao consultar o modelo semântico: {erro}")
             st.stop()
+        except ModelosIndisponiveis:
+            st.warning(
+                "Nenhum modelo de linguagem disponível agora: a API gratuita limita "
+                "requisições por minuto. Tente de novo em um ou dois minutos."
+            )
+            st.stop()
 
-        st.markdown(resposta.texto)
-        consultas_registradas = [
-            {"medidas": c.medidas, "dax": c.dax, "linhas": c.linhas}
-            for c in resposta.consultas
-        ]
-        for consulta in consultas_registradas:
-            with st.expander(
-                f"Consulta executada · {', '.join(consulta['medidas'])}", expanded=False
-            ):
-                st.code(consulta["dax"], language="sql")
-                if consulta["linhas"]:
-                    st.dataframe(consulta["linhas"], use_container_width=True)
+        nova = {
+            "papel": "assistant",
+            "texto": resposta.texto,
+            "modelo": agente.modelo_em_uso,
+            "latencia": time.monotonic() - inicio,
+            "consultas": [
+                {"medidas": c.medidas, "dax": c.dax, "linhas": c.linhas}
+                for c in resposta.consultas
+            ],
+        }
+        _mostrar(nova)
 
-    st.session_state.mensagens.append(
-        {"papel": "assistant", "texto": resposta.texto, "consultas": consultas_registradas}
-    )
+    st.session_state.mensagens.append(nova)
