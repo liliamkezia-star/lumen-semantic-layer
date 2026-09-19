@@ -129,10 +129,13 @@ def tem_lastro(valor: float, casas: int, lastro: set[float]) -> bool:
 def lastro_da_conversa(resultados: list[consultas.Resultado]) -> set[float]:
     cat = catalogo.carregar()
     lastro: set[float] = set()
-    # Números em nomes de medida são identificadores ("SGS 21082"), não
-    # afirmações sobre o dado — citar um não é inventar.
-    for nome in cat.medidas:
-        lastro.update(n for n, _ in extrair_numeros(nome))
+    # Números em nomes e descrições de medida são identificadores ("SGS
+    # 21082", "SGS 433"), não afirmações sobre o dado — citar um não é
+    # inventar. Descrições não podem conter valores de dado (o catálogo as
+    # omite do prompt: ver catalogo._descricao_para_agente).
+    for medida in cat.medidas.values():
+        for texto in (medida.nome, medida.descricao):
+            lastro.update(n for n, _ in extrair_numeros(texto))
     for resultado in resultados:
         for linha in resultado.linhas:
             for chave, valor in linha.items():

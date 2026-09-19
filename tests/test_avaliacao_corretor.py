@@ -213,6 +213,20 @@ def test_numero_nunca_consultado_na_conversa_continua_reprovando(catalogo_pf_pj)
     assert not veredito.passou
 
 
+def test_codigo_de_serie_da_descricao_nao_conta_como_inventado(monkeypatch):
+    """Falso positivo do benchmark: "SGS 433" vinha da descrição da medida."""
+    cat = Catalogo(
+        medidas={
+            "IPCA 12 Meses (SGS)": Medida(
+                nome="IPCA 12 Meses (SGS)", tabela="f", unidade="fracao",
+                descricao="IPCA acumulado em 12 meses (SGS 433).",
+            )
+        }
+    )
+    monkeypatch.setattr(catalogo, "carregar", lambda: cat)
+    assert 433.0 in avaliacao.lastro_da_conversa([])
+
+
 def test_codigo_de_serie_citado_nao_conta_como_inventado():
     v = avaliacao.avaliar(
         CASO_TAXA,
