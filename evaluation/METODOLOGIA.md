@@ -134,6 +134,40 @@ significativos. O corretor também passou a comparar quantidades em vez
 de texto, porque o baseline recebe números crus do SQL e pode escrever o
 mesmo valor em trilhões, bilhões ou por extenso.
 
+**2026-09-19 — rodada 1 invalidada.** A primeira rodada parou em 42 das
+60 perguntas (cota esgotada) com placar parcial de 35/42 para o agente e
+37/42 para o baseline. Antes de aceitar o número, todas as respostas
+marcadas como erro foram lidas, e três problemas de infraestrutura
+apareceram, todos do lado do agente:
+
+1. **Token vencido.** O token de acesso ao modelo semântico era guardado
+   para sempre, e tokens do Entra ID duram ~1 h. Cinco perguntas (D08,
+   D09, D10, E01, E02) falharam com "token expirado" — o agente recusou
+   corretamente, mas pela metodologia falha de infraestrutura não é erro
+   nem acerto. Corrigido: o token é renovado antes de vencer.
+2. **Prompt contaminado.** As descrições de cinco medidas continham
+   valores e datas ("dez/2025: SCR 4,10% vs SGS 4,20%"). O agente citou
+   4,10% em duas respostas sem consultar. Corrigido no modelo, e o
+   catálogo passou a omitir do prompt qualquer descrição com valor
+   decimal ou data.
+3. **Falso "sem lastro".** O corretor lia "2025-12" como "2025" e "-12".
+   Nove respostas corretas foram marcadas como número sem lastro.
+   Corrigido.
+
+Como os problemas 1 e 2 afetam o lado do agente, corrigir só os casos
+visíveis não seria justo com nenhuma das abordagens: a rodada 1 foi
+invalidada e o benchmark refeito do zero, para as duas, na rodada 2. O
+arquivo `resultados/rodada1.jsonl` fica publicado como registro.
+
+Leitura dos erros da rodada 1 que não eram de infraestrutura — e que
+devem ser procurados de novo na rodada 2:
+- **Baseline, 5 erros, todos iguais** (A02, B06, D04, D07, D10): com a
+  pergunta dizendo "segundo o SCR.data", consultou a série oficial do
+  BCB e atribuiu o número ao SCR.
+- **Agente, 2 erros**: B09 perdeu o filtro de modalidade ("empréstimos a
+  PJ" virou a carteira PJ inteira); B10 mapeou "cheque especial" para a
+  modalidade errada, em vez da submodalidade que existe no catálogo.
+
 ## Limitações conhecidas
 - Um modelo só, e aberto: o resultado não se generaliza para modelos de
   ponta sem nova rodada.

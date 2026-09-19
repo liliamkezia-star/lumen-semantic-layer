@@ -219,6 +219,33 @@ def test_catalogo_expoe_so_o_declarado_e_sinaliza_medida_nova(monkeypatch):
     assert cat.nao_classificadas == ["Medida Criada Ontem"]
 
 
+def test_descricao_com_valor_ou_data_nao_chega_ao_prompt(monkeypatch):
+    """No benchmark, o agente citou 4,10% tirado de uma descrição de medida,
+    sem consultar. Valor em descrição é cola — e envelhece."""
+    descricoes = {
+        "Carteira Ativa": "Saldo semiaditivo; dez/2025: R$ 7,44 Tri.",
+        "Taxa de Inadimplência PF": "Taxa de PF, 5,15% no último mês.",
+        "Carteira Vencida": "Saldo vencido, com dado até 2025-12.",
+        "% Carteira do Total (Modalidade)": "Base do corte de materialidade (≥1%).",
+    }
+    monkeypatch.setattr(
+        catalogo,
+        "executar_dax",
+        lambda _: [
+            {"[Name]": n, "[Table]": "fato_credito", "[Description]": d}
+            for n, d in descricoes.items()
+        ],
+    )
+    catalogo.carregar.cache_clear()
+    try:
+        cat = catalogo.carregar()
+    finally:
+        catalogo.carregar.cache_clear()
+    assert cat.descricoes_omitidas == ["Carteira Ativa", "Carteira Vencida", "Taxa de Inadimplência PF"]
+    assert cat.medidas["Carteira Ativa"].descricao == ""
+    assert cat.medidas["% Carteira do Total (Modalidade)"].descricao.endswith("(≥1%).")
+
+
 def test_medida_declarada_mas_removida_do_modelo_some_do_agente(monkeypatch):
     monkeypatch.setattr(
         catalogo,

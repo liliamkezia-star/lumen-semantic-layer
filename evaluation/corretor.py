@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 
 # número em formato brasileiro, seguido opcionalmente de escala ou unidade
 _QUANTIDADE = re.compile(
-    r"(-?\d{1,3}(?:\.\d{3})+(?:,\d+)?|-?\d+(?:,\d+)?)\s*"
+    r"((?:(?<!\d)-)?\d{1,3}(?:\.\d{3})+(?:,\d+)?|(?:(?<!\d)-)?\d+(?:,\d+)?)\s*"
     r"(%|p\.?\s?p\.?|pontos? percentua(?:l|is)|trilh(?:ao|oes)|tri\b|bilh(?:ao|oes)|bi\b"
     r"|milh(?:ao|oes)|mi\b|mil\b)?",
     re.IGNORECASE,

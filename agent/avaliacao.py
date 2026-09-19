@@ -93,7 +93,9 @@ MARCAS_DE_RECUSA = (
     "nao cobre", "nao permite", "nao inclui", "nao faz parte", "indisponivel", "fora do",
 )
 
-_NUMERO = re.compile(r"-?\d{1,3}(?:\.\d{3})+(?:,\d+)?|-?\d+(?:,\d+)?")
+# Hífen colado a dígito não é sinal de menos: "2025-12" é uma competência,
+# não "2025" e "-12" (falso "número sem lastro" em 9 respostas do benchmark).
+_NUMERO = re.compile(r"(?:(?<!\d)-)?\d{1,3}(?:\.\d{3})+(?:,\d+)?|(?:(?<!\d)-)?\d+(?:,\d+)?")
 
 
 def _sem_acento(texto: str) -> str:

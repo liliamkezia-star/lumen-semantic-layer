@@ -9,6 +9,7 @@ chamar `executar_dax` com uma string vinda do modelo de linguagem.
 from __future__ import annotations
 
 import os
+import time
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -53,8 +54,25 @@ def _credenciais() -> dict[str, str]:
     }
 
 
-@lru_cache(maxsize=1)
+# Renova o token antes de vencer. A primeira versão guardava o token para
+# sempre (lru_cache): tokens do Entra ID duram ~1 h, e a primeira rodada do
+# benchmark, mais longa que isso, começou a falhar no meio com "token
+# expirado" — o mesmo aconteceria com qualquer sessão longa do app.
+MARGEM_RENOVACAO_S = 300
+_cache_token: dict[str, float | str] = {}
+
+
 def _token() -> str:
+    agora = time.time()
+    if _cache_token and agora < float(_cache_token["vence_em"]) - MARGEM_RENOVACAO_S:
+        return str(_cache_token["valor"])
+    corpo = _pedir_token()
+    _cache_token["valor"] = corpo["access_token"]
+    _cache_token["vence_em"] = agora + float(corpo.get("expires_in", 3600))
+    return str(_cache_token["valor"])
+
+
+def _pedir_token() -> dict:
     cred = _credenciais()
     resposta = requests.post(
         f"https://login.microsoftonline.com/{cred['tenant_id']}/oauth2/v2.0/token",
@@ -72,7 +90,7 @@ def _token() -> str:
             "(ver ADR-008), renove-o no App Registration. "
             f"Detalhe: {resposta.text[:300]}"
         )
-    return resposta.json()["access_token"]
+    return resposta.json()
 
 
 def _cabecalhos() -> dict[str, str]:

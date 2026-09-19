@@ -44,8 +44,16 @@ def executar_sql(consulta: str, limite: int | None = None) -> list[dict[str, Any
     `limite` corta o resultado no lado do cliente: o baseline não pode
     trazer 34 milhões de linhas por engano.
     """
-    cursor = _conexao().cursor()
-    cursor.execute(consulta)
+    try:
+        cursor = _conexao().cursor()
+        cursor.execute(consulta)
+    except pyodbc.Error:
+        # Conexão longa pode perder a autenticação (o token do Entra ID vence
+        # em ~1 h). Reconecta uma vez; se o erro for do SQL, ele se repete e
+        # sobe normalmente.
+        _conexao.cache_clear()
+        cursor = _conexao().cursor()
+        cursor.execute(consulta)
     if cursor.description is None:
         return []
     colunas = [c[0] for c in cursor.description]

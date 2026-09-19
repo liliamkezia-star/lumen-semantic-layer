@@ -12,6 +12,7 @@ implementada e como é verificada. Decisão de arquitetura: ADR-015.
 | Medida nova no modelo não é exposta até alguém decidir | `Catalogo.nao_classificadas` | teste com medida fictícia "criada ontem" |
 | Valor de filtro só chega ao DAX se for idêntico a um valor existente no modelo | `catalogo.validar_valor` | teste de tentativa de injeção; sabotar a validação faz 3 testes falharem |
 | Escolha inválida volta para o modelo como texto, com as opções válidas | `ferramentas.consultar_metricas` | testes de recusa de medida, corte e valor |
+| Descrição de medida com valor decimal ou data não entra no prompt (seria "cola" que envelhece) | `catalogo._descricao_para_agente` | teste com descrições reais do tipo que vazou no benchmark |
 
 ## 2. Número só com lastro
 

@@ -9,6 +9,7 @@ recalcular: existe uma definição só.
 
 from __future__ import annotations
 
+import re
 import unicodedata
 from dataclasses import dataclass, field
 from functools import lru_cache
@@ -128,6 +129,22 @@ EXCLUIDAS = {
 }
 
 
+# Descrição de medida vai para o prompt do agente. Se ela contém um valor
+# ("dez/2025: SCR 4,10%"), o agente pode citá-lo sem consultar — e o valor
+# envelhece quando a Gold ganha um mês novo. Achado no benchmark da Sprint
+# 12: o agente citou 4,10% vindo de uma descrição, sem nenhuma consulta.
+# Limiares de definição inteiros ("≥1%", "menor que 100%") são regra, não
+# dado, e continuam permitidos.
+_VALOR_OU_DATA = re.compile(
+    r"\d+,\d+|\b(?:jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez)/\d{4}|\b20\d\d-\d\d"
+)
+
+
+def _descricao_para_agente(descricao: str) -> str | None:
+    """A descrição, ou None se ela carrega valor ou data."""
+    return None if _VALOR_OU_DATA.search(descricao) else descricao
+
+
 def _e_peca_de_dashboard(nome: str) -> bool:
     """Convenção do modelo: ` · ` marca ajudante de visual e `(Texto)`
     marca variante já formatada para cartão."""
@@ -151,6 +168,8 @@ class Catalogo:
     # Medidas que existem no modelo mas ninguém decidiu ainda se o agente
     # deve ver nem em que unidade apresentar. Ficam de fora até decisão.
     nao_classificadas: list[str] = field(default_factory=list)
+    # Medidas cuja descrição foi omitida do prompt por conter valor ou data.
+    descricoes_omitidas: list[str] = field(default_factory=list)
 
     def nomes_de_medidas(self) -> list[str]:
         return sorted(self.medidas)
@@ -210,18 +229,26 @@ def carregar() -> Catalogo:
     linhas = executar_dax("EVALUATE FILTER ( INFO.VIEW.MEASURES (), NOT [IsHidden] )")
     medidas = {}
     nao_classificadas = []
+    omitidas = []
     for linha in linhas:
         nome = linha["[Name]"]
         if nome in UNIDADES:
+            descricao = _descricao_para_agente(linha.get("[Description]") or "")
+            if descricao is None:
+                omitidas.append(nome)
             medidas[nome] = Medida(
                 nome=nome,
                 tabela=linha.get("[Table]") or "",
                 unidade=UNIDADES[nome],
-                descricao=linha.get("[Description]") or "",
+                descricao=descricao or "",
             )
         elif not _e_peca_de_dashboard(nome):
             nao_classificadas.append(nome)
-    return Catalogo(medidas=medidas, nao_classificadas=sorted(nao_classificadas))
+    return Catalogo(
+        medidas=medidas,
+        nao_classificadas=sorted(nao_classificadas),
+        descricoes_omitidas=sorted(omitidas),
+    )
 
 
 @lru_cache(maxsize=32)
