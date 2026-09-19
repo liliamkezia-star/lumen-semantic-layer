@@ -111,7 +111,16 @@ class Agente:
                 "repositório com GEMINI_API_KEY=... (chave gratuita em "
                 "https://aistudio.google.com/apikey)."
             )
-        self.cliente = genai.Client(api_key=chave)
+        # Uma tentativa por modelo: a cadeia de reserva já é a estratégia de
+        # repetição. Com as repetições internas do SDK ligadas, um modelo
+        # sobrecarregado segurava a resposta por mais de um minuto antes de a
+        # cadeia chegar ao próximo (medido: 65 s numa pergunta simples).
+        self.cliente = genai.Client(
+            api_key=chave,
+            http_options=types.HttpOptions(
+                timeout=90_000, retry_options=types.HttpRetryOptions(attempts=1)
+            ),
+        )
         self.modelos = [modelo or MODELO, *RESERVAS] if modelo is None else [modelo]
         self.modelo_em_uso = self.modelos[0]
         self.configuracao = types.GenerateContentConfig(
