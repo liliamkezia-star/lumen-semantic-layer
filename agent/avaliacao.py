@@ -209,22 +209,36 @@ def avaliar(caso: Caso, agente_novo) -> Veredito:
 
 
 def main() -> int:
-    """Uso: python -m agent.avaliacao [a_partir_do_caso]
+    """Uso: python -m agent.avaliacao [a_partir_do_caso] [--modelo NOME]
 
     O número opcional retoma a partir de um caso (contando de 1). A cota
     gratuita da API costuma acabar no meio da rodada; repetir os casos que
     já passaram só gasta a cota que falta para os outros.
+
+    `--modelo` fixa um único modelo, sem cadeia de reserva. É o modo certo
+    para medir: um placar em que cada caso foi respondido por um modelo
+    diferente não mede modelo nenhum.
     """
+    import argparse
+
     from .agente import Agente, ModelosIndisponiveis
 
-    inicio = int(sys.argv[1]) if len(sys.argv) > 1 else 1
+    parser = argparse.ArgumentParser(prog="python -m agent.avaliacao")
+    parser.add_argument("inicio", nargs="?", type=int, default=1)
+    parser.add_argument("--modelo", default=None)
+    argumentos = parser.parse_args()
+    inicio = argumentos.inicio
+    modelo_fixo = argumentos.modelo
+
+    def novo_agente() -> Agente:
+        return Agente(modelo=modelo_fixo)
     vereditos: list[Veredito] = []
     for indice, caso in enumerate(CASOS, start=1):
         if indice < inicio:
             continue
         print(f"[{indice:>2}/{len(CASOS)}] {caso.nome} ...", end=" ", flush=True)
         try:
-            veredito = avaliar(caso, Agente)
+            veredito = avaliar(caso, novo_agente)
         except ModelosIndisponiveis as erro:
             print("interrompido: nenhum modelo disponível.")
             vereditos.append(Veredito(caso=caso.nome, pergunta=caso.perguntas[-1], erro=str(erro)))
@@ -239,9 +253,10 @@ def main() -> int:
     print(f"\n{aprovados}/{len(executados)} casos aprovados", end="")
     if len(executados) < pedidos:
         faltam = inicio + len(executados)
+        sufixo = f" --modelo {modelo_fixo}" if modelo_fixo else ""
         print(
             f" ({pedidos - len(executados)} não executados — retome com: "
-            f"python -m agent.avaliacao {faltam})",
+            f"python -m agent.avaliacao {faltam}{sufixo})",
             end="",
         )
     print()

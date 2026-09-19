@@ -27,8 +27,20 @@ from . import catalogo, consultas, ferramentas
 # projeto, modelos alternam entre disponível e indisponível em questão de
 # segundos. Cair para o próximo é o comportamento correto; falhar na cara
 # de quem perguntou não é.
+#
+# Os Gemma 4 (modelos abertos do Google, servidos pela mesma API) têm cota
+# gratuita separada dos Gemini Flash e suportam ferramentas — medido: com a
+# cota dos Flash esgotada, o gemma-4-26b-a4b-it respondeu o ranking de UF
+# certo, com o DAX certo. Mais lentos (~40s por pergunta), mas é o que
+# mantém o projeto sem custo.
 MODELO = os.getenv("LUMEN_MODELO_LLM", "gemini-3.6-flash")
-RESERVAS = ["gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite"]
+RESERVAS = [
+    "gemini-3.7-flash",
+    "gemini-3.8-flash",
+    "gemini-3.1-flash-lite",
+    "gemma-4-26b-a4b-it",
+    "gemma-4-31b-it",
+]
 
 
 class ChaveAusente(RuntimeError):
