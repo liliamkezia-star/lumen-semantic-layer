@@ -156,6 +156,9 @@ class Veredito:
     recusou: bool | None = None
     sem_lastro: list[str] = field(default_factory=list)
     consultas: list[str] = field(default_factory=list)
+    # A cadeia de reserva pode responder com um modelo diferente a cada
+    # caso; sem isto, um placar misturando modelos pareceria de um só.
+    modelo: str = ""
     erro: str = ""
 
     @property
@@ -174,6 +177,7 @@ def avaliar(caso: Caso, agente_novo) -> Veredito:
         time.sleep(PAUSA_ENTRE_TURNOS)
     veredito.resposta = resposta.texto
     veredito.consultas = [r.dax for r in resposta.consultas]
+    veredito.modelo = getattr(agente, "modelo_em_uso", "")
 
     lastro = lastro_do_turno(resposta.consultas)
     veredito.sem_lastro = [
@@ -227,7 +231,7 @@ def main() -> int:
             break
         vereditos.append(veredito)
         detalhe = f" (sem lastro: {', '.join(veredito.sem_lastro)})" if veredito.sem_lastro else ""
-        print(("ok" if veredito.passou else "FALHOU") + detalhe)
+        print(("ok" if veredito.passou else "FALHOU") + f" [{veredito.modelo}]" + detalhe)
 
     executados = [v for v in vereditos if not v.erro]
     aprovados = sum(v.passou for v in executados)
