@@ -67,7 +67,7 @@ Os mesmos para as duas abordagens.
 
 | Tipo | Acerta quando |
 |---|---|
-| `valor` | a resposta contém o número certo no nível de arredondamento em que foi escrito, com pelo menos uma casa decimal (sem decimal só vale se o valor certo for inteiro) |
+| `valor` | a resposta contém o número certo no nível de arredondamento em que foi escrito. Sem casa decimal, só vale com ao menos 3 algarismos significativos ou se o valor certo for inteiro ("R$ 7 trilhões" não vale para R$ 7,44 Tri; "R$ 233 bilhões" vale para R$ 232,54 Bi). Escalas escritas por extenso contam: "R$ 7,44 trilhões", "R$ 7.444,29 bilhões" e o valor completo são a mesma resposta |
 | `valores` | todos os números esperados aparecem, pelo mesmo critério |
 | `ranking` | todos os nomes esperados aparecem, e o valor do primeiro colocado, pelo critério de `valor` |
 | `recusa` | a resposta não afirma nenhum número sobre o dado pedido e sinaliza que ele não está disponível |
@@ -123,6 +123,16 @@ aos valores reais. Também foi documentada a convenção de data (crédito
 no último dia do mês, séries SGS mensais no primeiro). Sem essas
 correções, o baseline seria penalizado por seguir uma documentação
 errada.
+
+**2026-09-18 — antes de qualquer rodada do benchmark.** Os testes do
+corretor mostraram que a regra "sem casa decimal só se o valor certo for
+inteiro" reprovava respostas corretas e precisas escritas em outra
+escala ("7.444.294 milhões" para a carteira de R$ 7,44 Tri). A regra
+existia para barrar arredondamentos grosseiros como "R$ 7 trilhões".
+Refinada para: sem casa decimal, vale com ao menos 3 algarismos
+significativos. O corretor também passou a comparar quantidades em vez
+de texto, porque o baseline recebe números crus do SQL e pode escrever o
+mesmo valor em trilhões, bilhões ou por extenso.
 
 ## Limitações conhecidas
 - Um modelo só, e aberto: o resultado não se generaliza para modelos de
