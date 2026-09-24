@@ -23,7 +23,7 @@ O projeto segue um plano de 12 sprints:
 |---|---|---|
 | 1–5 | Fundação, Bronze, Silver, Gold (star schema em dbt) | ✅ |
 | 6 | Modelo semântico Direct Lake + medidas certificadas | ✅ |
-| 7 | AI-readiness: sinônimos, BPA na CI, RLS | ⏸️ adiada — RLS conflita com o agente (ver [ADR-015](docs/decision-log/adr-015-arquitetura-agente-governado.md)) |
+| 7 | AI-readiness: sinônimos, BPA na CI, RLS | ⛔ RLS **descartado** na v1.0 com razão registrada; os outros itens viram backlog (ver [ADR-017](docs/decision-log/adr-017-rls-fora-do-escopo-da-v1.md)) |
 | 8 | Dashboard Power BI (5 páginas) | ✅ |
 | 9 | ML explicável: previsão de inadimplência e anomalias | ⬜ |
 | 10 | Agente analítico governado | ✅ |
@@ -261,6 +261,13 @@ predefinida.
   identidade fixa (entidade de serviço não é aceita com SSO); troca de
   Claude para Gemini/Gemma pelo custo zero; resultado da avaliação e o
   ajuste da regra de lastro feito depois de uma falha
+- **ADR-016**: Medidas deflacionadas pelo IPCA criadas **antes** do
+  gabarito, para que a camada certificada não fosse ajustada em resposta
+  a uma pergunta do teste
+- **ADR-017**: RLS fora do escopo da v1.0 — o agente consulta com
+  identidade fixa (consequência do ADR-015), então segurança em nível de
+  linha filtraria pelo serviço e não por quem pergunta; os outros quatro
+  itens da Sprint 7 não estão bloqueados e viram backlog
 
 ## Estrutura do projeto
 
