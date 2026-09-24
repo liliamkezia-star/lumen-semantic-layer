@@ -20,7 +20,7 @@ import contextvars
 import json
 from typing import Any
 
-from . import catalogo, consultas
+from . import catalogo, consultas, ritmo
 
 # Registro das consultas de uma execução, para a interface poder mostrar
 # exatamente o que foi perguntado ao modelo semântico. É o que torna a
@@ -95,6 +95,7 @@ def consultar_metricas(
         descendente: ordem decrescente (padrão) ou crescente.
         limite: máximo de linhas quando houver agrupamento. 0 = sem limite.
     """
+    ritmo.espacar()
     # O modelo às vezes manda uma medida solta em vez de lista; iterar a
     # string caractere a caractere daria um erro incompreensível ("'T' não
     # é uma medida certificada").
@@ -149,6 +150,7 @@ def listar_valores(corte: str) -> str:
     Args:
         corte: nome do corte, ex.: "uf", "modalidade", "competencia".
     """
+    ritmo.espacar()
     try:
         valores = catalogo.valores_do_corte(corte)
     except catalogo.CorteDesconhecido as erro:

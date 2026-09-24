@@ -1,0 +1,194 @@
+[
+  {
+    "caso": "continuação para PJ",
+    "pergunta": "E de pessoa jurídica?",
+    "resposta": "**1. O dado certificado**\nA Taxa de Inadimplência PJ é de **2,49%**, com uma variação de **0,52 p.p.** em relação ao mesmo período do ano anterior.\n\n**2. A leitura**\nEmbora a inadimplência no segmento de pessoas jurídicas seja significativamente menor que a de pessoas físicas (2,49% contra 5,15%), o setor também apresenta uma trajetória de crescimento na taxa de atrasos, com alta de 0,52 ponto percentual no comparativo anual.",
+    "esperado": "2,49",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [
+      "5,15"
+    ],
+    "consultas": [
+      "EVALUATE ROW ( \"Taxa de Inadimplência PJ\", [Taxa de Inadimplência PJ], \"Taxa de Inadimplência PJ Δpp a/a\", [Taxa de Inadimplência PJ Δpp a/a] )"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": false
+  },
+  {
+    "caso": "variação anual",
+    "pergunta": "Quanto a taxa de inadimplência subiu em relação a um ano antes?",
+    "resposta": "**O dado certificado:**\n* **Taxa de Inadimplência Δpp a/a:** 1,11 pp (referente à última competência disponível).\n\n**A leitura:**\nA taxa de inadimplência apresentou um aumento de 1,11 ponto percentual em relação ao mesmo período do ano anterior.",
+    "esperado": "1,11",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE ROW ( \"Taxa de Inadimplência Δpp a/a\", [Taxa de Inadimplência Δpp a/a] )"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "competência histórica",
+    "pergunta": "Qual era a taxa de inadimplência em dezembro de 2020?",
+    "resposta": "**Dado certificado**\n* **Taxa de Inadimplência (SCR.data):** 2,05% (referente à competência de dez/2020).\n\n**Leitura**\n* Em dezembro de 2020, o nível de inadimplência registrado no SCR era de 2,05%.",
+    "esperado": "2,05",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE CALCULATETABLE ( ROW ( \"Taxa de Inadimplência (SCR.data)\", [Taxa de Inadimplência (SCR.data)] ), FILTER ( ALL ( dim_calendario[ano_mes] ), dim_calendario[ano_mes] IN { \"2020-12\" } ) )"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "filtro por UF",
+    "pergunta": "Qual a taxa de inadimplência em São Paulo?",
+    "resposta": "**Dado certificado**\nA Taxa de Inadimplência (SCR.data) para o estado de São Paulo é de **3,24%**, referente à competência de **31/12/2025**.\n\n**Leitura**\nA taxa de inadimplência em São Paulo apresenta um patamar de 3,24% no último dado disponível, refletindo o comportamento do crédito na maior economia do país no fechamento de 2025.",
+    "esperado": "3,24",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE CALCULATETABLE ( ROW ( \"Taxa de Inadimplência (SCR.data)\", [Taxa de Inadimplência (SCR.data)] ), FILTER ( ALL ( dim_uf[nome_uf] ), dim_uf[nome_uf] IN { \"São Paulo\" } ) )",
+      "EVALUATE CALCULATETABLE ( ROW ( \"Última Competência com Crédito\", [Última Competência com Crédito] ), FILTER ( ALL ( dim_uf[nome_uf] ), dim_uf[nome_uf] IN { \"São Paulo\" } ) )"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "ranking de UF",
+    "pergunta": "Qual UF tem a maior taxa de inadimplência?",
+    "resposta": "### Dado certificado\n* **UF:** Maranhão\n* **Taxa de Inadimplência (SCR.data):** 7,56% (referente à última competência disponível nos dados)\n\n### Leitura\nO Maranhão apresenta a maior taxa de inadimplência entre as unidades federativas, com um índice de 7,56%.",
+    "esperado": "Maranhão / 7,56",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE TOPN ( 1, SUMMARIZECOLUMNS ( dim_uf[nome_uf], \"Taxa de Inadimplência (SCR.data)\", [Taxa de Inadimplência (SCR.data)] ), [Taxa de Inadimplência (SCR.data)], DESC ) ORDER BY [Taxa de Inadimplência (SCR.data)] DESC"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "ranking de região",
+    "pergunta": "Qual região tem a menor taxa de inadimplência?",
+    "resposta": "**O dado certificado:**\nA região com a menor taxa de inadimplência é o **Sudeste**, com uma **Taxa de Inadimplência (SCR.data) de 3,50%** (referente à última competência disponível nos dados).\n\n**A leitura:**\nO Sudeste apresenta o melhor desempenho em termos de qualidade de crédito entre as regiões, registrando o menor índice de inadimplência do conjunto analisado.",
+    "esperado": "Sudeste / 3,5",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE TOPN ( 1, SUMMARIZECOLUMNS ( dim_uf[nome_regiao], \"Taxa de Inadimplência (SCR.data)\", [Taxa de Inadimplência (SCR.data)] ), [Taxa de Inadimplência (SCR.data)], ASC ) ORDER BY [Taxa de Inadimplência (SCR.data)] ASC"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "ranking de modalidade",
+    "pergunta": "Qual modalidade de crédito tem a maior carteira?",
+    "resposta": "### Dado certificado\nCom base na última competência disponível, as modalidades com as maiores carteiras ativas são:\n\n* **Empréstimos:** R$ 2,59 Tri\n* **Financiamentos imobiliários:** R$ 1,40 Tri\n* **Financiamentos:** R$ 1,28 Tri\n* **Financiamentos rurais:** R$ 826,78 Bi\n* **Outros créditos:** R$ 803,01 Bi\n\n### Leitura\nA modalidade de **Empréstimos** lidera isoladamente o volume de crédito, apresentando um saldo significativamente superior ao segundo colocado (Financiamentos imobiliários).",
+    "esperado": "Empréstimos / 2,59",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE TOPN ( 5, SUMMARIZECOLUMNS ( dim_modalidade[modalidade], \"Carteira Ativa\", [Carteira Ativa] ), [Carteira Ativa], DESC ) ORDER BY [Carteira Ativa] DESC"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "referência do BCB",
+    "pergunta": "Qual a taxa de inadimplência oficial do Banco Central?",
+    "resposta": "### 1. O dado certificado\nA taxa de inadimplência oficial do Banco Central (SGS 21082) é de **4,20%**, referente à competência de **31/12/2025**.\n\n### 2. A leitura\nEste valor representa a série oficial do Banco Central (via SGS) utilizada como referência externa para comparação com os dados de crédito do SCR.",
+    "esperado": "4,2",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE ROW ( \"Inadimplência BCB (SGS 21082)\", [Inadimplência BCB (SGS 21082)] )",
+      "EVALUATE ROW ( \"Última Competência com Crédito\", [Última Competência com Crédito] )"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "macro",
+    "pergunta": "Qual a Selic meta mais recente?",
+    "resposta": "**Dado certificado**\n* **Selic Meta (SGS):** 15,00% (competência 2025-12)\n\n**Leitura**\n* Não há necessidade de interpretação para este dado, que é uma medida direta da taxa básica de juros.",
+    "esperado": "15,0",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE ROW ( \"Selic Meta (SGS)\", [Selic Meta (SGS)] )",
+      "EVALUATE SUMMARIZECOLUMNS ( dim_calendario[ano_mes], \"Selic Meta (SGS)\", [Selic Meta (SGS)] ) ORDER BY [Selic Meta (SGS)] DESC"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "recusa: banco",
+    "pergunta": "Qual banco tem a maior inadimplência?",
+    "resposta": "Não consigo responder a essa pergunta porque não possuo o corte **\"banco\"** (instituição financeira) disponível para realizar esse ranking.\n\nPara analisar onde a inadimplência está mais concentrada, posso agrupar os dados por outros critérios. Posso mostrar, por exemplo, o ranking da inadimplência por:\n\n* **Segmento** (ex: varejo, atacado, etc.);\n* **Modalidade** (ex: crédito pessoal, cartão, etc.);\n* **Região** ou **UF**;\n* **Tipo de cliente** (PF ou PJ).\n\nGostaria de ver a inadimplência agrupada por algum desses critérios?",
+    "esperado": "recusa",
+    "acertou": null,
+    "recusou": true,
+    "sem_lastro": [],
+    "consultas": [],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "recusa: previsão",
+    "pergunta": "Qual será a taxa de inadimplência em 2027?",
+    "resposta": "Não posso realizar previsões para o futuro, como a taxa de inadimplência para 2027. Meus dados são baseados em registros históricos certificados do Banco Central (SCR e SGS) e do IBGE, e a última competência disponível nos dados é dezembro de 2025.\n\nPara ajudar na sua análise de tendência, posso fornecer a **Taxa de Inadimplência (SCR.data)** mais recente disponível. Deseja que eu apresente esse dado?",
+    "esperado": "recusa",
+    "acertou": null,
+    "recusou": false,
+    "sem_lastro": [],
+    "consultas": [],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": false
+  },
+  {
+    "caso": "recusa: município",
+    "pergunta": "Qual a inadimplência em Campinas?",
+    "resposta": "Não possuo dados detalhados por cidade (como Campinas). Os dados de crédito disponíveis estão agregados por níveis geográficos mais amplos.\n\nPara te ajudar, posso fornecer a inadimplência para:\n* **Estado (UF):** ex: São Paulo.\n* **Região:** ex: Sudeste.\n\nSe desejar, posso consultar a **Taxa de Inadimplência (SCR.data)** para o estado de São Paulo ou para a região Sudeste. Como você gostaria de prosseguir?",
+    "esperado": "recusa",
+    "acertou": null,
+    "recusou": false,
+    "sem_lastro": [],
+    "consultas": [],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": false
+  },
+  {
+    "caso": "recusa: juros",
+    "pergunta": "Qual a taxa de juros média do cheque especial?",
+    "resposta": "Não possuo uma medida de \"taxa de juros média\" por modalidade (como o cheque especial) disponível no meu catálogo de dados certificados.\n\nO que posso fornecer sobre o **cheque especial** (ou outras modalidades) são indicadores de saúde e volume da carteira, como:\n\n*   **Carteira Ativa:** O saldo total de crédito nessa modalidade.\n*   **Taxa de Inadimplência:** O percentual de atraso/inadimplência específico para essa modalidade.\n*   **% Carteira do Total (Modalidade):** A participação do cheque especial no total da carteira de crédito.\n*   **Número de Operações:** A quantidade de contratos ativos.\n\nAlém disso, disponho da medida macroeconômica **Spread Médio (SGS)**, mas ela é um indicador geral do mercado e não detalha a taxa de juros de uma modalidade específica.\n\nSe desejar, posso consultar os dados de **inadimplência** ou **saldo de carteira** para o cheque especial. Como gostaria de prosseguir?",
+    "esperado": "recusa",
+    "acertou": null,
+    "recusou": false,
+    "sem_lastro": [],
+    "consultas": [],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": false
+  }
+]

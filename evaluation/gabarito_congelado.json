@@ -1,0 +1,947 @@
+{
+  "verificado_em": "2026-09-18T23:45:28-03:00",
+  "perguntas": [
+    {
+      "id": "A01",
+      "categoria": "A",
+      "pergunta": "Segundo o SCR.data, qual era a carteira de crédito ativa em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          7444293999119.027
+        ],
+        "texto": [
+          "R$ 7,44 Tri"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "A02",
+      "categoria": "A",
+      "pergunta": "Segundo o SCR.data, qual era a taxa de inadimplência do crédito em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.04104441442333712
+        ],
+        "texto": [
+          "4,10%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "A03",
+      "categoria": "A",
+      "pergunta": "Quanto havia de carteira vencida em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          232541033339.0774
+        ],
+        "texto": [
+          "R$ 232,54 Bi"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "A04",
+      "categoria": "A",
+      "pergunta": "Qual era o saldo de ativo problemático em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          570301244176.6538
+        ],
+        "texto": [
+          "R$ 570,30 Bi"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "A05",
+      "categoria": "A",
+      "pergunta": "Que percentual da carteira era ativo problemático em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.07660917801528855
+        ],
+        "texto": [
+          "7,66%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "A06",
+      "categoria": "A",
+      "pergunta": "Quantas operações de crédito ativas havia em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "contagem",
+      "esperado": {
+        "brutos": [
+          928619478
+        ],
+        "texto": [
+          "928.619.478"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "A07",
+      "categoria": "A",
+      "pergunta": "Qual era a carteira a vencer em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          7211752965779.933
+        ],
+        "texto": [
+          "R$ 7,21 Tri"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "A08",
+      "categoria": "A",
+      "pergunta": "Quanto do crédito estava em inadimplência, em reais, em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          305546687989.0029
+        ],
+        "texto": [
+          "R$ 305,55 Bi"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "A09",
+      "categoria": "A",
+      "pergunta": "Qual a proporção da carteira que estava vencida em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.031237486505314913
+        ],
+        "texto": [
+          "3,12%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "A10",
+      "categoria": "A",
+      "pergunta": "Qual a taxa de inadimplência oficial divulgada pelo Banco Central para dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.042
+        ],
+        "texto": [
+          "4,20%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "B01",
+      "categoria": "B",
+      "pergunta": "Qual era a taxa de inadimplência de pessoas físicas em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.05145458042916557
+        ],
+        "texto": [
+          "5,15%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "B02",
+      "categoria": "B",
+      "pergunta": "Qual era a taxa de inadimplência de pessoas jurídicas em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.0249070961884736
+        ],
+        "texto": [
+          "2,49%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "B03",
+      "categoria": "B",
+      "pergunta": "Qual era a taxa de inadimplência em São Paulo em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.032387119217435166
+        ],
+        "texto": [
+          "3,24%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "B04",
+      "categoria": "B",
+      "pergunta": "Qual era a carteira de crédito ativa da região Nordeste em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          1046733371636.5002
+        ],
+        "texto": [
+          "R$ 1,05 Tri"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "B05",
+      "categoria": "B",
+      "pergunta": "Qual era a taxa de inadimplência dos financiamentos imobiliários em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.010820938360445623
+        ],
+        "texto": [
+          "1,08%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "B06",
+      "categoria": "B",
+      "pergunta": "Segundo o SCR.data, qual era a taxa de inadimplência em dezembro de 2020?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.020467026369849536
+        ],
+        "texto": [
+          "2,05%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "B07",
+      "categoria": "B",
+      "pergunta": "Segundo o SCR.data, qual era a carteira de crédito ativa em junho de 2018?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          3171105854806.3228
+        ],
+        "texto": [
+          "R$ 3,17 Tri"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "B08",
+      "categoria": "B",
+      "pergunta": "Qual era a taxa de inadimplência de pessoas físicas na Bahia em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.05969078104378413
+        ],
+        "texto": [
+          "5,97%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "B09",
+      "categoria": "B",
+      "pergunta": "Qual era a carteira de empréstimos a pessoas jurídicas em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          1106016169511.914
+        ],
+        "texto": [
+          "R$ 1,11 Tri"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "B10",
+      "categoria": "B",
+      "pergunta": "Qual era o saldo da carteira de cheque especial em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          50112286768.87998
+        ],
+        "texto": [
+          "R$ 50,11 Bi"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "C01",
+      "categoria": "C",
+      "pergunta": "Qual UF tinha a maior taxa de inadimplência em dezembro de 2025?",
+      "tipo": "ranking",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.07557575101316642
+        ],
+        "texto": [
+          "7,56%"
+        ],
+        "nomes": [
+          "Maranhão"
+        ]
+      }
+    },
+    {
+      "id": "C02",
+      "categoria": "C",
+      "pergunta": "Qual UF tinha a menor taxa de inadimplência em dezembro de 2025?",
+      "tipo": "ranking",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.031105762509063807
+        ],
+        "texto": [
+          "3,11%"
+        ],
+        "nomes": [
+          "Distrito Federal"
+        ]
+      }
+    },
+    {
+      "id": "C03",
+      "categoria": "C",
+      "pergunta": "Qual região tinha a menor taxa de inadimplência em dezembro de 2025?",
+      "tipo": "ranking",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.034961228266607386
+        ],
+        "texto": [
+          "3,50%"
+        ],
+        "nomes": [
+          "Sudeste"
+        ]
+      }
+    },
+    {
+      "id": "C04",
+      "categoria": "C",
+      "pergunta": "Qual modalidade de crédito tinha a maior carteira ativa em dezembro de 2025?",
+      "tipo": "ranking",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          2588213508739.518
+        ],
+        "texto": [
+          "R$ 2,59 Tri"
+        ],
+        "nomes": [
+          "Empréstimos"
+        ]
+      }
+    },
+    {
+      "id": "C05",
+      "categoria": "C",
+      "pergunta": "Qual modalidade de crédito tinha a maior taxa de inadimplência em dezembro de 2025?",
+      "tipo": "ranking",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.6679694085330902
+        ],
+        "texto": [
+          "66,80%"
+        ],
+        "nomes": [
+          "Adiantamentos a depositantes"
+        ]
+      }
+    },
+    {
+      "id": "C06",
+      "categoria": "C",
+      "pergunta": "Qual UF tinha a maior carteira de crédito ativa em dezembro de 2025?",
+      "tipo": "ranking",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          2239478349829.096
+        ],
+        "texto": [
+          "R$ 2,24 Tri"
+        ],
+        "nomes": [
+          "São Paulo"
+        ]
+      }
+    },
+    {
+      "id": "C07",
+      "categoria": "C",
+      "pergunta": "Quais as três UFs com maior taxa de inadimplência em dezembro de 2025?",
+      "tipo": "ranking",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.07557575101316642,
+          0.07186035697915484,
+          0.05885540602245276
+        ],
+        "texto": [
+          "7,56%",
+          "7,19%",
+          "5,89%"
+        ],
+        "nomes": [
+          "Maranhão",
+          "Tocantins",
+          "Mato Grosso do Sul"
+        ]
+      }
+    },
+    {
+      "id": "C08",
+      "categoria": "C",
+      "pergunta": "Compare a taxa de inadimplência de pessoas físicas e jurídicas em dezembro de 2025.",
+      "tipo": "valores",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.05145458042916557,
+          0.0249070961884736
+        ],
+        "texto": [
+          "5,15%",
+          "2,49%"
+        ],
+        "nomes": [],
+        "rotulos": [
+          "PF",
+          "PJ"
+        ]
+      }
+    },
+    {
+      "id": "C09",
+      "categoria": "C",
+      "pergunta": "Que tipo de instituição financeira tinha a maior taxa de inadimplência em dezembro de 2025?",
+      "tipo": "ranking",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.12497274214022397
+        ],
+        "texto": [
+          "12,50%"
+        ],
+        "nomes": [
+          "Financeira"
+        ]
+      }
+    },
+    {
+      "id": "C10",
+      "categoria": "C",
+      "pergunta": "Qual região concentrava a maior carteira de crédito ativa em dezembro de 2025?",
+      "tipo": "ranking",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          3595693019873.953
+        ],
+        "texto": [
+          "R$ 3,60 Tri"
+        ],
+        "nomes": [
+          "Sudeste"
+        ]
+      }
+    },
+    {
+      "id": "D01",
+      "categoria": "D",
+      "pergunta": "Segundo o SCR.data, qual foi a carteira de crédito ativa em 2024?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          6688616692283.309
+        ],
+        "texto": [
+          "R$ 6,69 Tri"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "D02",
+      "categoria": "D",
+      "pergunta": "Segundo o SCR.data, qual foi a carteira de crédito ativa em 2020?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          4203923206205.4653
+        ],
+        "texto": [
+          "R$ 4,20 Tri"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "D03",
+      "categoria": "D",
+      "pergunta": "Segundo o SCR.data, em quantos por cento a carteira de crédito ativa cresceu entre dezembro de 2024 e dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.1129796102245697
+        ],
+        "texto": [
+          "11,30%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "D04",
+      "categoria": "D",
+      "pergunta": "Segundo o SCR.data, qual era a taxa de inadimplência no fim de 2024?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.029910200483383744
+        ],
+        "texto": [
+          "2,99%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "D05",
+      "categoria": "D",
+      "pergunta": "Quantas operações de crédito ativas havia em 2023?",
+      "tipo": "valor",
+      "unidade": "contagem",
+      "esperado": {
+        "brutos": [
+          650768591
+        ],
+        "texto": [
+          "650.768.591"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "D06",
+      "categoria": "D",
+      "pergunta": "Qual era a carteira vencida ao fim do primeiro trimestre de 2025?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          169268917104.40723
+        ],
+        "texto": [
+          "R$ 169,27 Bi"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "D07",
+      "categoria": "D",
+      "pergunta": "Segundo o SCR.data, em quantos pontos percentuais a taxa de inadimplência variou entre dezembro de 2024 e dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "pp",
+      "esperado": {
+        "brutos": [
+          1.1134213939953372
+        ],
+        "texto": [
+          "1,11 pp"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "D08",
+      "categoria": "D",
+      "pergunta": "Quanto o ativo problemático cresceu, em percentual, nos 12 meses até dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.3097622528646109
+        ],
+        "texto": [
+          "30,98%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "D09",
+      "categoria": "D",
+      "pergunta": "Qual era a carteira de crédito ativa de pessoas físicas no fim de 2022?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          3237508641146.65
+        ],
+        "texto": [
+          "R$ 3,24 Tri"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "D10",
+      "categoria": "D",
+      "pergunta": "Segundo o SCR.data, qual foi a taxa de inadimplência ao fim de cada trimestre de 2025?",
+      "tipo": "valores",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.037362417137865304,
+          0.03994040723231896,
+          0.04104441442333652,
+          0.03410990132418737
+        ],
+        "texto": [
+          "3,74%",
+          "3,99%",
+          "4,10%",
+          "3,41%"
+        ],
+        "nomes": [],
+        "rotulos": [
+          "T2",
+          "T3",
+          "T4",
+          "T1"
+        ]
+      }
+    },
+    {
+      "id": "E01",
+      "categoria": "E",
+      "pergunta": "Qual foi a inflação (IPCA) acumulada em 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.042643849045689075
+        ],
+        "texto": [
+          "4,26%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "E02",
+      "categoria": "E",
+      "pergunta": "Segundo o SCR.data e descontada a inflação, quanto a carteira de crédito ativa cresceu entre dezembro de 2024 e dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.06745904773068734
+        ],
+        "texto": [
+          "6,75%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "E03",
+      "categoria": "E",
+      "pergunta": "Segundo o SCR.data, quanto valeria a carteira de crédito ativa de dezembro de 2020 em reais de dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "reais",
+      "esperado": {
+        "brutos": [
+          5597036846992.097
+        ],
+        "texto": [
+          "R$ 5,60 Tri"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "E04",
+      "categoria": "E",
+      "pergunta": "Qual foi a inflação (IPCA) acumulada em 2024?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.04831295791859613
+        ],
+        "texto": [
+          "4,83%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "E05",
+      "categoria": "E",
+      "pergunta": "Qual foi a Selic meta, em média, em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "percentual",
+      "esperado": {
+        "brutos": [
+          15.0
+        ],
+        "texto": [
+          "15,00%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "E06",
+      "categoria": "E",
+      "pergunta": "Qual era o spread médio das operações de crédito em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "pp",
+      "esperado": {
+        "brutos": [
+          21.01
+        ],
+        "texto": [
+          "21,01 pp"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "E07",
+      "categoria": "E",
+      "pergunta": "Qual era o endividamento das famílias em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "percentual",
+      "esperado": {
+        "brutos": [
+          49.72
+        ],
+        "texto": [
+          "49,72%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "E08",
+      "categoria": "E",
+      "pergunta": "Qual era a relação entre crédito e PIB em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "percentual",
+      "esperado": {
+        "brutos": [
+          56.02
+        ],
+        "texto": [
+          "56,02%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "E09",
+      "categoria": "E",
+      "pergunta": "Qual foi o volume de concessões de crédito a pessoas físicas em dezembro de 2025?",
+      "tipo": "valor",
+      "unidade": "reais_milhoes",
+      "esperado": {
+        "brutos": [
+          407477.0
+        ],
+        "texto": [
+          "R$ 407,48 Bi"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "E10",
+      "categoria": "E",
+      "pergunta": "Segundo o SCR.data e descontada a inflação, quanto a carteira de crédito ativa cresceu entre dezembro de 2020 e dezembro de 2021?",
+      "tipo": "valor",
+      "unidade": "fracao",
+      "esperado": {
+        "brutos": [
+          0.05690253775723253
+        ],
+        "texto": [
+          "5,69%"
+        ],
+        "nomes": []
+      }
+    },
+    {
+      "id": "F01",
+      "categoria": "F",
+      "pergunta": "Qual a taxa de inadimplência do Banco do Brasil?",
+      "tipo": "recusa",
+      "unidade": null,
+      "esperado": {
+        "recusa": true
+      }
+    },
+    {
+      "id": "F02",
+      "categoria": "F",
+      "pergunta": "Qual será a taxa de inadimplência em dezembro de 2027?",
+      "tipo": "recusa",
+      "unidade": null,
+      "esperado": {
+        "recusa": true
+      }
+    },
+    {
+      "id": "F03",
+      "categoria": "F",
+      "pergunta": "Qual a taxa de inadimplência em Campinas?",
+      "tipo": "recusa",
+      "unidade": null,
+      "esperado": {
+        "recusa": true
+      }
+    },
+    {
+      "id": "F04",
+      "categoria": "F",
+      "pergunta": "Qual a taxa de juros média do cheque especial?",
+      "tipo": "recusa",
+      "unidade": null,
+      "esperado": {
+        "recusa": true
+      }
+    },
+    {
+      "id": "F05",
+      "categoria": "F",
+      "pergunta": "Qual era a carteira de crédito do Maranhão em janeiro de 2026?",
+      "tipo": "recusa",
+      "unidade": null,
+      "esperado": {
+        "recusa": true
+      }
+    },
+    {
+      "id": "F06",
+      "categoria": "F",
+      "pergunta": "Qual a taxa de inadimplência por gênero dos tomadores?",
+      "tipo": "recusa",
+      "unidade": null,
+      "esperado": {
+        "recusa": true
+      }
+    },
+    {
+      "id": "F07",
+      "categoria": "F",
+      "pergunta": "Qual era a carteira de crédito ativa em 2014?",
+      "tipo": "recusa",
+      "unidade": null,
+      "esperado": {
+        "recusa": true
+      }
+    },
+    {
+      "id": "F08",
+      "categoria": "F",
+      "pergunta": "Quantas pessoas estão inadimplentes no Brasil?",
+      "tipo": "recusa",
+      "unidade": null,
+      "esperado": {
+        "recusa": true
+      }
+    },
+    {
+      "id": "F09",
+      "categoria": "F",
+      "pergunta": "Qual a taxa de inadimplência por faixa de idade dos tomadores?",
+      "tipo": "recusa",
+      "unidade": null,
+      "esperado": {
+        "recusa": true
+      }
+    },
+    {
+      "id": "F10",
+      "categoria": "F",
+      "pergunta": "Qual será a Selic meta em dezembro de 2026?",
+      "tipo": "recusa",
+      "unidade": null,
+      "esperado": {
+        "recusa": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "caso": "continuação para PJ",
+    "pergunta": "E de pessoa jurídica?",
+    "resposta": "**O dado certificado:**\nA Taxa de Inadimplência PJ é de **2,49%**, referente à competência de **31/12/2025**.\n\n**A leitura:**\nA inadimplência no segmento de pessoas jurídicas apresenta um patamar significativamente inferior ao observado no segmento de pessoas físicas (que era de 5,15% na mesma competência).",
+    "esperado": "2,49",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE ROW ( \"Taxa de Inadimplência PF\", [Taxa de Inadimplência PF] )",
+      "EVALUATE ROW ( \"Taxa de Inadimplência PF\", [Taxa de Inadimplência PF], \"Última Competência com Crédito\", [Última Competência com Crédito] )",
+      "EVALUATE ROW ( \"Taxa de Inadimplência PJ\", [Taxa de Inadimplência PJ] )",
+      "EVALUATE ROW ( \"Última Competência com Crédito\", [Última Competência com Crédito] )"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  }
+]

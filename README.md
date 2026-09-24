@@ -1,8 +1,11 @@
 # Lumen — Camada Semântica "AI-Ready" + Agente Analítico Governado
 
-> 🚧 Projeto em desenvolvimento — 8 de 12 sprints do plano entregues:
+> 🚧 Projeto em desenvolvimento — 9 de 12 sprints do plano entregues:
 > engenharia de dados, migração para Microsoft Fabric, modelo semântico,
-> dashboard Power BI e agente analítico governado.
+> dashboard Power BI, agente analítico governado e o gabarito que mede
+> se a governança vale a pena. No [benchmark](#benchmark-a-camada-certificada-vale-a-pena)
+> de 60 perguntas, o agente faz **59/60** contra **53/60** do mesmo
+> modelo escrevendo SQL livre sobre as mesmas tabelas.
 
 ## Visão
 
@@ -24,8 +27,8 @@ O projeto segue um plano de 12 sprints:
 | 8 | Dashboard Power BI (5 páginas) | ✅ |
 | 9 | ML explicável: previsão de inadimplência e anomalias | ⬜ |
 | 10 | Agente analítico governado | ✅ |
-| 11 | Gabarito de 60 perguntas + baseline text-to-SQL | ⬜ |
-| 12 | Benchmark agente × text-to-SQL e lançamento | ⬜ |
+| 11 | Gabarito de 60 perguntas + baseline text-to-SQL | ✅ |
+| 12 | Benchmark agente × text-to-SQL e lançamento | 🔄 benchmark concluído ([resultados](evaluation/resultados/rodada2.md)); lançamento em curso |
 
 - **Nota sobre numeração:** ADRs e commits anteriores a setembro de 2026
   chamam o dashboard de "Sprint 7" e o agente de "Sprint 8". A numeração
@@ -136,6 +139,57 @@ Decisões e o diagnóstico de acesso ao modelo (por que a conexão usa
 identidade fixa, sem SSO) em
 [ADR-015](docs/decision-log/adr-015-arquitetura-agente-governado.md).
 
+## Benchmark: a camada certificada vale a pena?
+
+É a pergunta que justifica o projeto inteiro. Um agente preso a medidas
+certificadas acerta mais do que o **mesmo modelo** escrevendo SQL livre
+sobre **as mesmas tabelas**? Para a resposta valer alguma coisa, as duas
+pontas usam `gemma-4-26b-a4b-it`, e o gabarito das 60 perguntas foi
+verificado por dois caminhos independentes — SQL escrito à mão na Gold e
+DAX certificado — **antes** de qualquer rodada, com os critérios de
+correção fechados de antemão.
+
+| Categoria | Agente | Baseline text-to-SQL |
+|---|---|---|
+| A — Consulta direta | 10/10 | 9/10 |
+| B — Filtros e cortes | 9/10 | 9/10 |
+| C — Rankings e comparações | 10/10 | 10/10 |
+| D — Semiaditividade (pegadinha) | **10/10** | **7/10** |
+| E — Macro e deflacionamento (pegadinha) | 10/10 | 8/10 |
+| F — Fora de escopo (deve recusar) | 10/10 | 10/10 |
+| **Total** | **59/60** | **53/60** |
+
+Recusas indevidas: 0 contra 1. Latência mediana: 21 s contra 24 s — a
+governança não custou tempo.
+
+**Onde a diferença aparece.** Não é no básico: em consulta direta e em
+ranking os dois vão bem, e é assim que tem que ser. A distância abre nas
+pegadinhas, que é exatamente o que a camada certificada existe para
+resolver. E 5 dos 7 erros do baseline são **o mesmo erro**: a pergunta
+diz "segundo o SCR.data", ele consulta a série oficial do BCB e atribui
+o número ao SCR. O resultado sai plausível, redondo e com fonte errada —
+o tipo de erro que passa despercebido numa reunião.
+
+**O agente também erra**, e o erro está publicado: em B09 perdeu o
+filtro de modalidade e respondeu a carteira PJ inteira (R$ 2,92 Tri) no
+lugar de empréstimos a PJ (R$ 1,11 Tri). Errar o filtro é diferente de
+errar a fonte, mas continua sendo errar.
+
+**O que este número não prova.** Um modelo só, e aberto: não se
+generaliza para modelos de ponta sem nova rodada. As perguntas foram
+escritas por quem construiu a camada, e o viés é mitigado — não
+eliminado — pela verificação independente e pela categoria A, onde o
+baseline deveria ir bem. E há variação entre execuções: nas 84 perguntas
+que as duas rodadas têm em comum, o baseline não divergiu em nenhuma
+(os erros são sistemáticos), mas o agente divergiu em uma. O placar vale
+como diferença de ordem de grandeza, não como número exato.
+
+Relatório completo, erro a erro, em
+[`evaluation/resultados/rodada2.md`](evaluation/resultados/rodada2.md).
+Critérios, e o registro de **toda** alteração feita depois de fixados —
+inclusive a única feita com a rodada em curso — em
+[`evaluation/METODOLOGIA.md`](evaluation/METODOLOGIA.md).
+
 ### Como rodar
 
 Crie um `.env` na raiz (fora do git) com:
@@ -152,11 +206,19 @@ dbt) ou das variáveis `FABRIC_TENANT_ID`, `FABRIC_CLIENT_ID` e
 ```bash
 streamlit run agent/app.py                              # interface
 python -m agent.avaliacao --modelo gemma-4-26b-a4b-it   # avaliação (consome cota da API)
+python -m evaluation.verificar_gabarito                 # confere o gabarito pelos dois caminhos
+python -m evaluation.benchmark --rodada minha_rodada    # benchmark (retomável, horas de cota)
+python -m evaluation.relatorio evaluation/resultados/minha_rodada.jsonl
 ```
 
 Usa o nível gratuito da API: com cota esgotada, o agente passa para o
 próximo modelo da cadeia de reserva, e a avaliação espera a janela de
-cota virar.
+cota virar. O teto que mais atrapalha não é o de requisições por dia, e
+sim o de **tokens de entrada por minuto** — como cada chamada com
+ferramenta reenvia a conversa inteira, uma pergunta sozinha pode
+estourá-lo. Por isso o benchmark espaça as chamadas
+([`agent/ritmo.py`](agent/ritmo.py)), e desconta essa espera da latência
+medida. O custo do projeto está em [`docs/finops.md`](docs/finops.md).
 
 ## Decisões técnicas (ADRs)
 
@@ -215,6 +277,9 @@ powerbi/ → catálogo de medidas DAX, tema do relatório e specs Deneb
   (Vega-Lite) do dashboard (Sprint 8)
 agent/ → agente analítico (Sprint 10): acesso ao modelo, catálogo,
   consulta governada, ferramentas, interface, avaliação e guardrails
+evaluation/ → benchmark (Sprints 11–12): gabarito das 60 perguntas e sua
+  verificação, baseline text-to-SQL, corretor, runner, metodologia e
+  resultados de cada rodada
 
 ## Fontes de dados
 

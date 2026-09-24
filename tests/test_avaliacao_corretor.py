@@ -68,6 +68,12 @@ def test_extrai_numeros_no_formato_brasileiro():
     assert extrair_numeros("R$ 2.588,2 Bi e 4,10%") == [(2588.2, 1), (4.10, 2)]
 
 
+def test_competencia_com_hifen_nao_vira_numero_negativo():
+    """ "2025-12" gerava um "-12" sem lastro em 9 respostas corretas."""
+    assert extrair_numeros("competência 2025-12") == [(2025.0, 0), (12.0, 0)]
+    assert extrair_numeros("variação de -0,10 pp") == [(-0.10, 2)]
+
+
 def test_arredondar_valor_certificado_tem_lastro():
     assert tem_lastro(4.1, 1, {4.10})
     assert not tem_lastro(4.2, 1, {4.10})
@@ -205,6 +211,20 @@ def test_numero_nunca_consultado_na_conversa_continua_reprovando(catalogo_pf_pj)
     veredito = avaliacao.avaliar(CASO_CONTINUACAO, agente)
     assert veredito.sem_lastro == ["3,80"]
     assert not veredito.passou
+
+
+def test_codigo_de_serie_da_descricao_nao_conta_como_inventado(monkeypatch):
+    """Falso positivo do benchmark: "SGS 433" vinha da descrição da medida."""
+    cat = Catalogo(
+        medidas={
+            "IPCA 12 Meses (SGS)": Medida(
+                nome="IPCA 12 Meses (SGS)", tabela="f", unidade="fracao",
+                descricao="IPCA acumulado em 12 meses (SGS 433).",
+            )
+        }
+    )
+    monkeypatch.setattr(catalogo, "carregar", lambda: cat)
+    assert 433.0 in avaliacao.lastro_da_conversa([])
 
 
 def test_codigo_de_serie_citado_nao_conta_como_inventado():

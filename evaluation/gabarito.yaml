@@ -1,0 +1,563 @@
+# Gabarito do benchmark (Sprint 11 do plano). Metodologia em METODOLOGIA.md.
+#
+# Cada pergunta tem duas verificações independentes:
+#   sql:          escrito à mão sobre a Gold (SQL endpoint), sem passar pelo DAX.
+#                 Devolve a coluna `valor` (e `nome` em ranking, `rotulo` em
+#                 respostas com vários valores).
+#   certificada:  a consulta equivalente na camada semântica
+#                 (argumentos de agent.consultas.consultar).
+# A resposta só entra no gabarito congelado se as duas baterem.
+#
+# Competências sempre explícitas nas perguntas: o gabarito é congelado e
+# não pode "andar" quando a Gold ganhar um mês novo.
+#
+# tipo:     valor | valores | ranking | recusa
+# unidade:  a mesma de agent.catalogo.UNIDADES (define como o número é lido)
+
+perguntas:
+
+  # ---------------------------------------------------------------- A
+  # Consulta direta: uma métrica, uma competência.
+
+  - id: A01
+    categoria: A
+    pergunta: Segundo o SCR.data, qual era a carteira de crédito ativa em dezembro de 2025?
+    tipo: valor
+    unidade: reais
+    sql: SELECT SUM(carteira_ativa) AS valor FROM gold.fato_credito WHERE id_data = 20251231
+    certificada: {medidas: [Carteira Ativa], filtros: {competencia: "2025-12"}}
+
+  - id: A02
+    categoria: A
+    pergunta: Segundo o SCR.data, qual era a taxa de inadimplência do crédito em dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT SUM(carteira_inadimplencia) / SUM(carteira_ativa) AS valor
+      FROM gold.fato_credito WHERE id_data = 20251231
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12"}}
+
+  - id: A03
+    categoria: A
+    pergunta: Quanto havia de carteira vencida em dezembro de 2025?
+    tipo: valor
+    unidade: reais
+    sql: SELECT SUM(carteira_vencida) AS valor FROM gold.fato_credito WHERE id_data = 20251231
+    certificada: {medidas: [Carteira Vencida], filtros: {competencia: "2025-12"}}
+
+  - id: A04
+    categoria: A
+    pergunta: Qual era o saldo de ativo problemático em dezembro de 2025?
+    tipo: valor
+    unidade: reais
+    sql: SELECT SUM(ativo_problematico) AS valor FROM gold.fato_credito WHERE id_data = 20251231
+    certificada: {medidas: [Ativo Problemático], filtros: {competencia: "2025-12"}}
+
+  - id: A05
+    categoria: A
+    pergunta: Que percentual da carteira era ativo problemático em dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT SUM(ativo_problematico) / SUM(carteira_ativa) AS valor
+      FROM gold.fato_credito WHERE id_data = 20251231
+    certificada: {medidas: [Taxa de Ativo Problemático], filtros: {competencia: "2025-12"}}
+
+  - id: A06
+    categoria: A
+    pergunta: Quantas operações de crédito ativas havia em dezembro de 2025?
+    tipo: valor
+    unidade: contagem
+    sql: SELECT SUM(numero_de_operacoes) AS valor FROM gold.fato_credito WHERE id_data = 20251231
+    certificada: {medidas: [Número de Operações], filtros: {competencia: "2025-12"}}
+
+  - id: A07
+    categoria: A
+    pergunta: Qual era a carteira a vencer em dezembro de 2025?
+    tipo: valor
+    unidade: reais
+    sql: SELECT SUM(carteira_a_vencer) AS valor FROM gold.fato_credito WHERE id_data = 20251231
+    certificada: {medidas: [Carteira a Vencer], filtros: {competencia: "2025-12"}}
+
+  - id: A08
+    categoria: A
+    pergunta: Quanto do crédito estava em inadimplência, em reais, em dezembro de 2025?
+    tipo: valor
+    unidade: reais
+    sql: SELECT SUM(carteira_inadimplencia) AS valor FROM gold.fato_credito WHERE id_data = 20251231
+    certificada: {medidas: [Carteira Inadimplência], filtros: {competencia: "2025-12"}}
+
+  - id: A09
+    categoria: A
+    pergunta: Qual a proporção da carteira que estava vencida em dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT SUM(carteira_vencida) / SUM(carteira_ativa) AS valor
+      FROM gold.fato_credito WHERE id_data = 20251231
+    certificada: {medidas: [Taxa de Carteira Vencida], filtros: {competencia: "2025-12"}}
+
+  - id: A10
+    categoria: A
+    pergunta: Qual a taxa de inadimplência oficial divulgada pelo Banco Central para dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT valor / 100 AS valor FROM gold.fato_indicador_macro
+      WHERE nome_serie = 'inadimplencia_total' AND id_data = 20251201
+    certificada: {medidas: [Inadimplência BCB (SGS 21082)], filtros: {competencia: "2025-12"}}
+
+  # ---------------------------------------------------------------- B
+  # Filtros e cortes: uma métrica restrita por dimensão ou competência.
+
+  - id: B01
+    categoria: B
+    pergunta: Qual era a taxa de inadimplência de pessoas físicas em dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_segmento s ON s.id_segmento = f.id_segmento
+      WHERE f.id_data = 20251231 AND s.cliente = 'PF'
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12", cliente: PF}}
+
+  - id: B02
+    categoria: B
+    pergunta: Qual era a taxa de inadimplência de pessoas jurídicas em dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_segmento s ON s.id_segmento = f.id_segmento
+      WHERE f.id_data = 20251231 AND s.cliente = 'PJ'
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12", cliente: PJ}}
+
+  - id: B03
+    categoria: B
+    pergunta: Qual era a taxa de inadimplência em São Paulo em dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_uf u ON u.id_uf = f.id_uf
+      WHERE f.id_data = 20251231 AND u.nome_uf = 'São Paulo'
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12", uf: São Paulo}}
+
+  - id: B04
+    categoria: B
+    pergunta: Qual era a carteira de crédito ativa da região Nordeste em dezembro de 2025?
+    tipo: valor
+    unidade: reais
+    sql: |
+      SELECT SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_uf u ON u.id_uf = f.id_uf
+      WHERE f.id_data = 20251231 AND u.nome_regiao = 'Nordeste'
+    certificada: {medidas: [Carteira Ativa], filtros: {competencia: "2025-12", regiao: Nordeste}}
+
+  - id: B05
+    categoria: B
+    pergunta: Qual era a taxa de inadimplência dos financiamentos imobiliários em dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_modalidade m ON m.id_modalidade = f.id_modalidade
+      WHERE f.id_data = 20251231 AND m.modalidade = 'Financiamentos imobiliários'
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12", modalidade: Financiamentos imobiliários}}
+
+  - id: B06
+    categoria: B
+    pergunta: Segundo o SCR.data, qual era a taxa de inadimplência em dezembro de 2020?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT SUM(carteira_inadimplencia) / SUM(carteira_ativa) AS valor
+      FROM gold.fato_credito WHERE id_data = 20201231
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2020-12"}}
+
+  - id: B07
+    categoria: B
+    pergunta: Segundo o SCR.data, qual era a carteira de crédito ativa em junho de 2018?
+    tipo: valor
+    unidade: reais
+    sql: SELECT SUM(carteira_ativa) AS valor FROM gold.fato_credito WHERE id_data = 20180630
+    certificada: {medidas: [Carteira Ativa], filtros: {competencia: "2018-06"}}
+
+  - id: B08
+    categoria: B
+    pergunta: Qual era a taxa de inadimplência de pessoas físicas na Bahia em dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f
+      JOIN gold.dim_uf u ON u.id_uf = f.id_uf
+      JOIN gold.dim_segmento s ON s.id_segmento = f.id_segmento
+      WHERE f.id_data = 20251231 AND u.nome_uf = 'Bahia' AND s.cliente = 'PF'
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12", uf: Bahia, cliente: PF}}
+
+  - id: B09
+    categoria: B
+    pergunta: Qual era a carteira de empréstimos a pessoas jurídicas em dezembro de 2025?
+    tipo: valor
+    unidade: reais
+    sql: |
+      SELECT SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f
+      JOIN gold.dim_modalidade m ON m.id_modalidade = f.id_modalidade
+      JOIN gold.dim_segmento s ON s.id_segmento = f.id_segmento
+      WHERE f.id_data = 20251231 AND m.modalidade = 'Empréstimos' AND s.cliente = 'PJ'
+    certificada: {medidas: [Carteira Ativa], filtros: {competencia: "2025-12", modalidade: Empréstimos, cliente: PJ}}
+
+  - id: B10
+    categoria: B
+    pergunta: Qual era o saldo da carteira de cheque especial em dezembro de 2025?
+    tipo: valor
+    unidade: reais
+    sql: |
+      SELECT SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_modalidade m ON m.id_modalidade = f.id_modalidade
+      WHERE f.id_data = 20251231 AND m.submodalidade = 'Cheque especial'
+    certificada: {medidas: [Carteira Ativa], filtros: {competencia: "2025-12", submodalidade: Cheque especial}}
+
+  # ---------------------------------------------------------------- C
+  # Rankings e comparações.
+
+  - id: C01
+    categoria: C
+    pergunta: Qual UF tinha a maior taxa de inadimplência em dezembro de 2025?
+    tipo: ranking
+    unidade: fracao
+    sql: |
+      SELECT u.nome_uf AS nome, SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_uf u ON u.id_uf = f.id_uf
+      WHERE f.id_data = 20251231 GROUP BY u.nome_uf ORDER BY valor DESC
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12"}, agrupar_por: uf, limite: 1}
+
+  - id: C02
+    categoria: C
+    pergunta: Qual UF tinha a menor taxa de inadimplência em dezembro de 2025?
+    tipo: ranking
+    unidade: fracao
+    sql: |
+      SELECT u.nome_uf AS nome, SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_uf u ON u.id_uf = f.id_uf
+      WHERE f.id_data = 20251231 GROUP BY u.nome_uf ORDER BY valor ASC
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12"}, agrupar_por: uf, descendente: false, limite: 1}
+
+  - id: C03
+    categoria: C
+    pergunta: Qual região tinha a menor taxa de inadimplência em dezembro de 2025?
+    tipo: ranking
+    unidade: fracao
+    sql: |
+      SELECT u.nome_regiao AS nome, SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_uf u ON u.id_uf = f.id_uf
+      WHERE f.id_data = 20251231 GROUP BY u.nome_regiao ORDER BY valor ASC
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12"}, agrupar_por: regiao, descendente: false, limite: 1}
+
+  - id: C04
+    categoria: C
+    pergunta: Qual modalidade de crédito tinha a maior carteira ativa em dezembro de 2025?
+    tipo: ranking
+    unidade: reais
+    sql: |
+      SELECT m.modalidade AS nome, SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_modalidade m ON m.id_modalidade = f.id_modalidade
+      WHERE f.id_data = 20251231 GROUP BY m.modalidade ORDER BY valor DESC
+    certificada: {medidas: [Carteira Ativa], filtros: {competencia: "2025-12"}, agrupar_por: modalidade, limite: 1}
+
+  - id: C05
+    categoria: C
+    pergunta: Qual modalidade de crédito tinha a maior taxa de inadimplência em dezembro de 2025?
+    tipo: ranking
+    unidade: fracao
+    sql: |
+      SELECT m.modalidade AS nome, SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_modalidade m ON m.id_modalidade = f.id_modalidade
+      WHERE f.id_data = 20251231 GROUP BY m.modalidade ORDER BY valor DESC
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12"}, agrupar_por: modalidade, limite: 1}
+
+  - id: C06
+    categoria: C
+    pergunta: Qual UF tinha a maior carteira de crédito ativa em dezembro de 2025?
+    tipo: ranking
+    unidade: reais
+    sql: |
+      SELECT u.nome_uf AS nome, SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_uf u ON u.id_uf = f.id_uf
+      WHERE f.id_data = 20251231 GROUP BY u.nome_uf ORDER BY valor DESC
+    certificada: {medidas: [Carteira Ativa], filtros: {competencia: "2025-12"}, agrupar_por: uf, limite: 1}
+
+  - id: C07
+    categoria: C
+    pergunta: Quais as três UFs com maior taxa de inadimplência em dezembro de 2025?
+    tipo: ranking
+    unidade: fracao
+    sql: |
+      SELECT u.nome_uf AS nome, SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_uf u ON u.id_uf = f.id_uf
+      WHERE f.id_data = 20251231 GROUP BY u.nome_uf ORDER BY valor DESC
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12"}, agrupar_por: uf, limite: 3}
+
+  - id: C08
+    categoria: C
+    pergunta: Compare a taxa de inadimplência de pessoas físicas e jurídicas em dezembro de 2025.
+    tipo: valores
+    unidade: fracao
+    sql: |
+      SELECT s.cliente AS rotulo, SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_segmento s ON s.id_segmento = f.id_segmento
+      WHERE f.id_data = 20251231 GROUP BY s.cliente
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12"}, agrupar_por: cliente}
+
+  - id: C09
+    categoria: C
+    pergunta: Que tipo de instituição financeira tinha a maior taxa de inadimplência em dezembro de 2025?
+    tipo: ranking
+    unidade: fracao
+    sql: |
+      SELECT s.segmento AS nome, SUM(f.carteira_inadimplencia) / SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_segmento s ON s.id_segmento = f.id_segmento
+      WHERE f.id_data = 20251231 GROUP BY s.segmento ORDER BY valor DESC
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {competencia: "2025-12"}, agrupar_por: segmento, limite: 1}
+
+  - id: C10
+    categoria: C
+    pergunta: Qual região concentrava a maior carteira de crédito ativa em dezembro de 2025?
+    tipo: ranking
+    unidade: reais
+    sql: |
+      SELECT u.nome_regiao AS nome, SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_uf u ON u.id_uf = f.id_uf
+      WHERE f.id_data = 20251231 GROUP BY u.nome_regiao ORDER BY valor DESC
+    certificada: {medidas: [Carteira Ativa], filtros: {competencia: "2025-12"}, agrupar_por: regiao, limite: 1}
+
+  # ---------------------------------------------------------------- D
+  # Semiaditividade (pegadinha): carteira é ESTOQUE. "A carteira de 2024" é
+  # a posição de dezembro de 2024 — somar os 12 meses dá um número 12 vezes
+  # maior e sem sentido. Variação de taxa é em pontos percentuais, não em %.
+
+  - id: D01
+    categoria: D
+    pergunta: Segundo o SCR.data, qual foi a carteira de crédito ativa em 2024?
+    tipo: valor
+    unidade: reais
+    sql: SELECT SUM(carteira_ativa) AS valor FROM gold.fato_credito WHERE id_data = 20241231
+    certificada: {medidas: [Carteira Ativa], filtros: {ano: 2024}}
+
+  - id: D02
+    categoria: D
+    pergunta: Segundo o SCR.data, qual foi a carteira de crédito ativa em 2020?
+    tipo: valor
+    unidade: reais
+    sql: SELECT SUM(carteira_ativa) AS valor FROM gold.fato_credito WHERE id_data = 20201231
+    certificada: {medidas: [Carteira Ativa], filtros: {ano: 2020}}
+
+  - id: D03
+    categoria: D
+    pergunta: Segundo o SCR.data, em quantos por cento a carteira de crédito ativa cresceu entre dezembro de 2024 e dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT (SELECT SUM(carteira_ativa) FROM gold.fato_credito WHERE id_data = 20251231)
+           / (SELECT SUM(carteira_ativa) FROM gold.fato_credito WHERE id_data = 20241231) - 1 AS valor
+    certificada: {medidas: [Carteira Ativa Δ% a/a], filtros: {competencia: "2025-12"}}
+
+  - id: D04
+    categoria: D
+    pergunta: Segundo o SCR.data, qual era a taxa de inadimplência no fim de 2024?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT SUM(carteira_inadimplencia) / SUM(carteira_ativa) AS valor
+      FROM gold.fato_credito WHERE id_data = 20241231
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {ano: 2024}}
+
+  - id: D05
+    categoria: D
+    pergunta: Quantas operações de crédito ativas havia em 2023?
+    tipo: valor
+    unidade: contagem
+    sql: SELECT SUM(numero_de_operacoes) AS valor FROM gold.fato_credito WHERE id_data = 20231231
+    certificada: {medidas: [Número de Operações], filtros: {ano: 2023}}
+
+  - id: D06
+    categoria: D
+    pergunta: Qual era a carteira vencida ao fim do primeiro trimestre de 2025?
+    tipo: valor
+    unidade: reais
+    sql: SELECT SUM(carteira_vencida) AS valor FROM gold.fato_credito WHERE id_data = 20250331
+    certificada: {medidas: [Carteira Vencida], filtros: {ano: 2025, trimestre: T1}}
+
+  - id: D07
+    categoria: D
+    pergunta: Segundo o SCR.data, em quantos pontos percentuais a taxa de inadimplência variou entre dezembro de 2024 e dezembro de 2025?
+    tipo: valor
+    unidade: pp
+    sql: |
+      SELECT ((SELECT SUM(carteira_inadimplencia) / SUM(carteira_ativa) FROM gold.fato_credito WHERE id_data = 20251231)
+            - (SELECT SUM(carteira_inadimplencia) / SUM(carteira_ativa) FROM gold.fato_credito WHERE id_data = 20241231)) * 100 AS valor
+    certificada: {medidas: [Taxa de Inadimplência Δpp a/a], filtros: {competencia: "2025-12"}}
+
+  - id: D08
+    categoria: D
+    pergunta: Quanto o ativo problemático cresceu, em percentual, nos 12 meses até dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT (SELECT SUM(ativo_problematico) FROM gold.fato_credito WHERE id_data = 20251231)
+           / (SELECT SUM(ativo_problematico) FROM gold.fato_credito WHERE id_data = 20241231) - 1 AS valor
+    certificada: {medidas: [Ativo Problemático Δ% a/a], filtros: {competencia: "2025-12"}}
+
+  - id: D09
+    categoria: D
+    pergunta: Qual era a carteira de crédito ativa de pessoas físicas no fim de 2022?
+    tipo: valor
+    unidade: reais
+    sql: |
+      SELECT SUM(f.carteira_ativa) AS valor
+      FROM gold.fato_credito f JOIN gold.dim_segmento s ON s.id_segmento = f.id_segmento
+      WHERE f.id_data = 20221231 AND s.cliente = 'PF'
+    certificada: {medidas: [Carteira Ativa], filtros: {ano: 2022, cliente: PF}}
+
+  - id: D10
+    categoria: D
+    pergunta: Segundo o SCR.data, qual foi a taxa de inadimplência ao fim de cada trimestre de 2025?
+    tipo: valores
+    unidade: fracao
+    sql: |
+      SELECT CASE id_data WHEN 20250331 THEN 'T1' WHEN 20250630 THEN 'T2'
+                          WHEN 20250930 THEN 'T3' ELSE 'T4' END AS rotulo,
+             SUM(carteira_inadimplencia) / SUM(carteira_ativa) AS valor
+      FROM gold.fato_credito
+      WHERE id_data IN (20250331, 20250630, 20250930, 20251231)
+      GROUP BY id_data
+    certificada: {medidas: [Taxa de Inadimplência (SCR.data)], filtros: {ano: 2025}, agrupar_por: trimestre}
+
+  # ---------------------------------------------------------------- E
+  # Macro e deflacionamento (pegadinha). Inflação acumulada é o PRODUTO de
+  # (1 + variação mensal), não a soma. Séries SGS mensais têm data no
+  # primeiro dia do mês; a Selic meta é diária, e a medida é a média do mês.
+
+  - id: E01
+    categoria: E
+    pergunta: Qual foi a inflação (IPCA) acumulada em 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT EXP(SUM(LOG(1 + valor / 100.0))) - 1 AS valor FROM gold.fato_indicador_macro
+      WHERE nome_serie = 'ipca_mensal' AND id_data BETWEEN 20250101 AND 20251201
+    certificada: {medidas: [IPCA 12 Meses (SGS)], filtros: {competencia: "2025-12"}}
+
+  - id: E02
+    categoria: E
+    pergunta: Segundo o SCR.data e descontada a inflação, quanto a carteira de crédito ativa cresceu entre dezembro de 2024 e dezembro de 2025?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT (SELECT SUM(carteira_ativa) FROM gold.fato_credito WHERE id_data = 20251231)
+           / (SELECT SUM(carteira_ativa) FROM gold.fato_credito WHERE id_data = 20241231)
+           / (SELECT EXP(SUM(LOG(1 + valor / 100.0))) FROM gold.fato_indicador_macro
+              WHERE nome_serie = 'ipca_mensal' AND id_data BETWEEN 20250101 AND 20251201) - 1 AS valor
+    certificada: {medidas: [Carteira Ativa Δ% a/a Real], filtros: {competencia: "2025-12"}}
+
+  - id: E03
+    categoria: E
+    pergunta: Segundo o SCR.data, quanto valeria a carteira de crédito ativa de dezembro de 2020 em reais de dezembro de 2025?
+    tipo: valor
+    unidade: reais
+    sql: |
+      SELECT (SELECT SUM(carteira_ativa) FROM gold.fato_credito WHERE id_data = 20201231)
+           * (SELECT EXP(SUM(LOG(1 + valor / 100.0))) FROM gold.fato_indicador_macro
+              WHERE nome_serie = 'ipca_mensal' AND id_data BETWEEN 20210101 AND 20251201) AS valor
+    certificada: {medidas: [Carteira Ativa Real (R$ da Última Competência)], filtros: {competencia: "2020-12"}}
+
+  - id: E04
+    categoria: E
+    pergunta: Qual foi a inflação (IPCA) acumulada em 2024?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT EXP(SUM(LOG(1 + valor / 100.0))) - 1 AS valor FROM gold.fato_indicador_macro
+      WHERE nome_serie = 'ipca_mensal' AND id_data BETWEEN 20240101 AND 20241201
+    certificada: {medidas: [IPCA 12 Meses (SGS)], filtros: {competencia: "2024-12"}}
+
+  - id: E05
+    categoria: E
+    pergunta: Qual foi a Selic meta, em média, em dezembro de 2025?
+    tipo: valor
+    unidade: percentual
+    sql: |
+      SELECT AVG(valor) AS valor FROM gold.fato_indicador_macro
+      WHERE nome_serie = 'selic_meta' AND id_data BETWEEN 20251201 AND 20251231
+    certificada: {medidas: [Selic Meta (SGS)], filtros: {competencia: "2025-12"}}
+
+  - id: E06
+    categoria: E
+    pergunta: Qual era o spread médio das operações de crédito em dezembro de 2025?
+    tipo: valor
+    unidade: pp
+    sql: |
+      SELECT valor FROM gold.fato_indicador_macro
+      WHERE nome_serie = 'spread_medio_total' AND id_data = 20251201
+    certificada: {medidas: [Spread Médio (SGS)], filtros: {competencia: "2025-12"}}
+
+  - id: E07
+    categoria: E
+    pergunta: Qual era o endividamento das famílias em dezembro de 2025?
+    tipo: valor
+    unidade: percentual
+    sql: |
+      SELECT valor FROM gold.fato_indicador_macro
+      WHERE nome_serie = 'endividamento_familias' AND id_data = 20251201
+    certificada: {medidas: [Endividamento das Famílias (SGS)], filtros: {competencia: "2025-12"}}
+
+  - id: E08
+    categoria: E
+    pergunta: Qual era a relação entre crédito e PIB em dezembro de 2025?
+    tipo: valor
+    unidade: percentual
+    sql: |
+      SELECT valor FROM gold.fato_indicador_macro
+      WHERE nome_serie = 'credito_pib' AND id_data = 20251201
+    certificada: {medidas: [Crédito/PIB (SGS)], filtros: {competencia: "2025-12"}}
+
+  - id: E09
+    categoria: E
+    pergunta: Qual foi o volume de concessões de crédito a pessoas físicas em dezembro de 2025?
+    tipo: valor
+    unidade: reais_milhoes
+    sql: |
+      SELECT valor FROM gold.fato_indicador_macro
+      WHERE nome_serie = 'concessoes_pf_total' AND id_data = 20251201
+    certificada: {medidas: [Concessões PF (SGS)], filtros: {competencia: "2025-12"}}
+
+  - id: E10
+    categoria: E
+    pergunta: Segundo o SCR.data e descontada a inflação, quanto a carteira de crédito ativa cresceu entre dezembro de 2020 e dezembro de 2021?
+    tipo: valor
+    unidade: fracao
+    sql: |
+      SELECT (SELECT SUM(carteira_ativa) FROM gold.fato_credito WHERE id_data = 20211231)
+           / (SELECT SUM(carteira_ativa) FROM gold.fato_credito WHERE id_data = 20201231)
+           / (SELECT EXP(SUM(LOG(1 + valor / 100.0))) FROM gold.fato_indicador_macro
+              WHERE nome_serie = 'ipca_mensal' AND id_data BETWEEN 20210101 AND 20211201) - 1 AS valor
+    certificada: {medidas: [Carteira Ativa Δ% a/a Real], filtros: {competencia: "2021-12"}}
+
+  # ---------------------------------------------------------------- F
+  # Fora de escopo: a resposta certa é recusar, sem afirmar número.
+  # Cuidado ao escrever esta categoria: porte (faixa de renda de PF) e
+  # segmento (tipo de instituição) EXISTEM na Gold — perguntas sobre eles
+  # são respondíveis e não entram aqui.
+
+  - {id: F01, categoria: F, tipo: recusa, pergunta: "Qual a taxa de inadimplência do Banco do Brasil?"}
+  - {id: F02, categoria: F, tipo: recusa, pergunta: "Qual será a taxa de inadimplência em dezembro de 2027?"}
+  - {id: F03, categoria: F, tipo: recusa, pergunta: "Qual a taxa de inadimplência em Campinas?"}
+  - {id: F04, categoria: F, tipo: recusa, pergunta: "Qual a taxa de juros média do cheque especial?"}
+  - {id: F05, categoria: F, tipo: recusa, pergunta: "Qual era a carteira de crédito do Maranhão em janeiro de 2026?"}
+  - {id: F06, categoria: F, tipo: recusa, pergunta: "Qual a taxa de inadimplência por gênero dos tomadores?"}
+  - {id: F07, categoria: F, tipo: recusa, pergunta: "Qual era a carteira de crédito ativa em 2014?"}
+  - {id: F08, categoria: F, tipo: recusa, pergunta: "Quantas pessoas estão inadimplentes no Brasil?"}
+  - {id: F09, categoria: F, tipo: recusa, pergunta: "Qual a taxa de inadimplência por faixa de idade dos tomadores?"}
+  - {id: F10, categoria: F, tipo: recusa, pergunta: "Qual será a Selic meta em dezembro de 2026?"}

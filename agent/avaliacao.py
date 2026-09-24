@@ -93,7 +93,9 @@ MARCAS_DE_RECUSA = (
     "nao cobre", "nao permite", "nao inclui", "nao faz parte", "indisponivel", "fora do",
 )
 
-_NUMERO = re.compile(r"-?\d{1,3}(?:\.\d{3})+(?:,\d+)?|-?\d+(?:,\d+)?")
+# Hífen colado a dígito não é sinal de menos: "2025-12" é uma competência,
+# não "2025" e "-12" (falso "número sem lastro" em 9 respostas do benchmark).
+_NUMERO = re.compile(r"(?:(?<!\d)-)?\d{1,3}(?:\.\d{3})+(?:,\d+)?|(?:(?<!\d)-)?\d+(?:,\d+)?")
 
 
 def _sem_acento(texto: str) -> str:
@@ -127,10 +129,13 @@ def tem_lastro(valor: float, casas: int, lastro: set[float]) -> bool:
 def lastro_da_conversa(resultados: list[consultas.Resultado]) -> set[float]:
     cat = catalogo.carregar()
     lastro: set[float] = set()
-    # Números em nomes de medida são identificadores ("SGS 21082"), não
-    # afirmações sobre o dado — citar um não é inventar.
-    for nome in cat.medidas:
-        lastro.update(n for n, _ in extrair_numeros(nome))
+    # Números em nomes e descrições de medida são identificadores ("SGS
+    # 21082", "SGS 433"), não afirmações sobre o dado — citar um não é
+    # inventar. Descrições não podem conter valores de dado (o catálogo as
+    # omite do prompt: ver catalogo._descricao_para_agente).
+    for medida in cat.medidas.values():
+        for texto in (medida.nome, medida.descricao):
+            lastro.update(n for n, _ in extrair_numeros(texto))
     for resultado in resultados:
         for linha in resultado.linhas:
             for chave, valor in linha.items():

@@ -4,7 +4,9 @@ models:
   - name: dim_calendario
     description: >
       Dimensão de calendário, gerada dia a dia de 2015-01-01 a 2026-12-31.
-      Não deriva de nenhuma fonte externa — é construída por generate_series.
+      Não deriva de nenhuma fonte externa — é construída por
+      dbt_utils.date_spine (ADR-008). Vai além do fim dos dados de crédito
+      (dez/2025): o último mês com dado não é o último mês do calendário.
       Deve ser marcada como Tabela de Data no modelo semântico (Sprint 6).
     columns:
       - name: id_data
@@ -100,8 +102,10 @@ models:
           - not_null
       - name: segmento
         description: >
-          Segmento da instituição financeira que concedeu o crédito
-          (ex Livre, Direcionado, Arrendamento).
+          Tipo da instituição financeira que concedeu o crédito (Banco,
+          Cooperativa, Financeira, Fintech, Instituição de pagamento,
+          Arrendamento, Desenvolvimento/Fomento, Outros). Não identifica a
+          instituição individual.
       - name: cliente
         description: Tipo de tomador - PF (pessoa física) ou PJ (pessoa jurídica).
       - name: cnae_ocupacao
@@ -110,8 +114,10 @@ models:
           alta cardinalidade.
       - name: porte
         description: >
-          Porte do tomador (ex Micro, Pequeno, Médio, Grande). Aplicável
-          principalmente a PJ.
+          Porte do tomador. Para PJ, porte da empresa (Micro, Pequeno,
+          Médio, Grande); para PF, faixa de renda (Sem rendimento, Até 1
+          salário mínimo ... Acima de 20 salários mínimos). "Indisponível"
+          quando a fonte não informa.
 
   - name: fato_credito
     description: >
@@ -124,10 +130,14 @@ models:
       data de referência. Podem ser somadas entre UF, modalidade e segmento
       dentro da mesma competência, mas NÃO devem ser somadas ao longo do
       tempo (somar o saldo de janeiro com o de fevereiro não representa
-      nada válido). Apenas numero_de_operacoes é plenamente aditiva.
+      nada válido). numero_de_operacoes segue a mesma regra: é o número de
+      operações ativas na competência, também um estoque.
     columns:
       - name: id_data
-        description: FK para dim_calendario, no formato YYYYMMDD.
+        description: >
+          FK para dim_calendario, no formato YYYYMMDD. A competência é
+          registrada no ÚLTIMO dia do mês (dez/2025 = 20251231). Dados de
+          jan/2015 a dez/2025.
         tests:
           - not_null
           - relationships:
@@ -160,8 +170,10 @@ models:
                 field: id_segmento
       - name: numero_de_operacoes
         description: >
-          Quantidade de operações de crédito no recorte. ADITIVA - pode ser
-          somada em qualquer dimensão, inclusive tempo. NULL quando a fonte
+          Quantidade de operações de crédito ativas no recorte, na
+          competência. SEMIADITIVA - é estoque (operações vivas no mês), não
+          fluxo: pode ser somada entre UF/modalidade/segmento, mas não ao
+          longo do tempo. NULL quando a fonte
           publicou o valor sentinela -1 (27,76% das linhas) - causa não
           documentada oficialmente, ver dicionário de dados.
       - name: carteira_a_vencer
@@ -199,7 +211,10 @@ models:
       de agregar ou comparar séries entre si.
     columns:
       - name: id_data
-        description: FK para dim_calendario, no formato YYYYMMDD.
+        description: >
+          FK para dim_calendario, no formato YYYYMMDD. Séries mensais são
+          registradas no PRIMEIRO dia do mês (dez/2025 = 20251201) — o
+          contrário de fato_credito; séries diárias, no próprio dia.
         tests:
           - not_null
           - relationships:
