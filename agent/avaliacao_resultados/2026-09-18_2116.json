@@ -1,0 +1,62 @@
+[
+  {
+    "caso": "taxa mais recente",
+    "pergunta": "Qual a taxa de inadimplência mais recente?",
+    "resposta": "**O dado certificado:**\nA Taxa de Inadimplência (SCR.data) é de **4,10%**, referente à competência de **31/12/2025**.\n\n**A leitura:**\nEste valor representa o percentual da carteira em inadimplência sobre o saldo da carteira ativa no último mês com dados disponíveis no SCR.",
+    "esperado": "4,1",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE ROW ( \"Taxa de Inadimplência (SCR.data)\", [Taxa de Inadimplência (SCR.data)], \"Última Competência com Crédito\", [Última Competência com Crédito] )"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "carteira ativa",
+    "pergunta": "Qual o tamanho da carteira de crédito ativa hoje?",
+    "resposta": "**O dado certificado:**\nA Carteira Ativa é de **R$ 7,44 Tri**, referente à competência de **31/12/2025**.\n\n**A leitura:**\nEste valor representa o saldo total de todas as operações de crédito ativas registradas na base até a última data disponível no conjunto de dados.",
+    "esperado": "7,44",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE ROW ( \"Carteira Ativa\", [Carteira Ativa], \"Última Competência com Crédito\", [Última Competência com Crédito] )"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "inadimplência PF",
+    "pergunta": "Qual a taxa de inadimplência de pessoa física?",
+    "resposta": "**1. O dado certificado**\nA Taxa de Inadimplência PF é de **5,15%** na competência de **31/12/2025**, com uma variação de **1,48 p.p.** em relação ao mesmo período do ano anterior.\n\n**2. A leitura**\nNota-se uma tendência de deterioração no crédito para pessoas físicas, evidenciada pelo aumento de 1,48 ponto percentual na taxa de inadimplência no comparativo anual.",
+    "esperado": "5,15",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE ROW ( \"Taxa de Inadimplência PF\", [Taxa de Inadimplência PF] )",
+      "EVALUATE ROW ( \"Última Competência com Crédito\", [Última Competência com Crédito] )",
+      "EVALUATE ROW ( \"Taxa de Inadimplência PF Δpp a/a\", [Taxa de Inadimplência PF Δpp a/a] )"
+    ],
+    "modelo": "gemma-4-26b-a4b-it",
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "continuação para PJ",
+    "pergunta": "E de pessoa jurídica?",
+    "resposta": "",
+    "esperado": "",
+    "acertou": null,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [],
+    "modelo": "",
+    "erro": "Nenhum modelo disponível no momento (a API gratuita do Gemini recusa por alta demanda em picos). Tentativas — gemma-4-26b-a4b-it: cota esgotada",
+    "passou": false
+  }
+]

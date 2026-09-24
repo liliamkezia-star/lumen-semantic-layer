@@ -1,0 +1,57 @@
+[
+  {
+    "caso": "taxa mais recente",
+    "pergunta": "Qual a taxa de inadimplência mais recente?",
+    "resposta": "O dado certificado mais recente indica que a **Taxa de Inadimplência (SCR.data)** é de **4,10%**, referente à competência de **dezembro de 2025**.",
+    "esperado": "4,1",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE ROW ( \"Taxa de Inadimplência (SCR.data)\", [Taxa de Inadimplência (SCR.data)] )",
+      "EVALUATE ROW ( \"Última Competência com Crédito\", [Última Competência com Crédito] )"
+    ],
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "carteira ativa",
+    "pergunta": "Qual o tamanho da carteira de crédito ativa hoje?",
+    "resposta": "**Dado certificado:**\n* **Carteira Ativa:** R$ 7,44 Tri\n* **Competência de referência:** 31/12/2025 (última competência disponível na base de dados de crédito)\n\n---\n\n**Leitura:**\nA base do SCR.data reflete a posição consolidada até dezembro de 2025, momento em que o saldo total da carteira ativa do Sistema Financeiro Nacional atingiu R$ 7,44 trilhões.",
+    "esperado": "7,44",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE ROW ( \"Carteira Ativa\", [Carteira Ativa], \"Última Competência com Crédito\", [Última Competência com Crédito] )"
+    ],
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "inadimplência PF",
+    "pergunta": "Qual a taxa de inadimplência de pessoa física?",
+    "resposta": "**1. Dado certificado**\n* **Competência:** Dezembro de 2025 (31/12/2025)\n* **Segmento:** Pessoa Física (PF)\n* **Taxa de Inadimplência PF:** 5,15%\n* **Variação anual (Δpp a/a):** +1,48 pp\n\n---\n\n**2. Leitura analítica**\n*A leitura a seguir representa uma interpretação analítica dos dados certificados:*\nA inadimplência no segmento de pessoa física encerrou o período de 2025 com avanço significativo de 1,48 ponto percentual em 12 meses, refletindo uma pressão no perfil de risco de crédito das famílias ao longo do ano.",
+    "esperado": "5,15",
+    "acertou": true,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [
+      "EVALUATE ROW ( \"Taxa de Inadimplência PF\", [Taxa de Inadimplência PF], \"Taxa de Inadimplência PF Δpp a/a\", [Taxa de Inadimplência PF Δpp a/a], \"Última Competência com Crédito\", [Última Competência com Crédito] )"
+    ],
+    "erro": "",
+    "passou": true
+  },
+  {
+    "caso": "continuação para PJ",
+    "pergunta": "E de pessoa jurídica?",
+    "resposta": "",
+    "esperado": "",
+    "acertou": null,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [],
+    "erro": "Nenhum modelo disponível no momento (a API gratuita do Gemini recusa por alta demanda em picos). Tentativas — gemini-3.1-flash-lite: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This mo; gemini-3.6-flash: cota esgotada; gemini-3.7-flash: cota esgotada; gemini-3.8-flash: cota esgotada",
+    "passou": false
+  }
+]

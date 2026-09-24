@@ -1,0 +1,62 @@
+[
+  {
+    "caso": "taxa mais recente",
+    "pergunta": "Qual a taxa de inadimplência mais recente?",
+    "resposta": "Peço desculpas, mas estou enfrentando uma instabilidade técnica ao processar a medida de \"Taxa de Inadimplência (SCR.data)\".\n\nPara que eu possa te responder com precisão, você poderia confirmar se gostaria de verificar a **Taxa de Inadimplência PF** ou a **Taxa de Inadimplência PJ**? Ambas estão disponíveis e podem ser consultadas imediatamente.",
+    "esperado": "4,1",
+    "acertou": false,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [],
+    "erro": "",
+    "passou": false
+  },
+  {
+    "caso": "carteira ativa",
+    "pergunta": "Qual o tamanho da carteira de crédito ativa hoje?",
+    "resposta": "Ocorreu um erro técnico ao consultar o modelo semântico do Lumen (`isinstance() arg 2 must be a type, a tuple of types, or a union`), o que impediu o retorno dos dados certificados da ferramenta `consultar_metricas`.\n\nPor diretriz estrita de governança, eu só posso apresentar valores que tenham sido diretamente retornados e certificados por meio dessa consulta nesta conversa (nenhum número pode ser estimado ou citado de memória). \n\nAssim que a conexão/serviço da ferramenta for restabelecida, poderei fornecer o valor exato da **Carteira Ativa** referente à última competência disponível.",
+    "esperado": "7,44",
+    "acertou": false,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [],
+    "erro": "",
+    "passou": false
+  },
+  {
+    "caso": "inadimplência PF",
+    "pergunta": "Qual a taxa de inadimplência de pessoa física?",
+    "resposta": "Desculpe, estou com uma dificuldade técnica ao processar a medida de \"Taxa de Inadimplência PF\".\n\nComo alternativa, posso consultar a **Taxa de Inadimplência (SCR.data)** geral ou a **Inadimplência BCB (SGS 21082)**. Gostaria que eu verificasse um desses valores para você?",
+    "esperado": "5,15",
+    "acertou": false,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [],
+    "erro": "",
+    "passou": false
+  },
+  {
+    "caso": "continuação para PJ",
+    "pergunta": "E de pessoa jurídica?",
+    "resposta": "Assim como na consulta anterior, não foi possível obter os dados certificados de **Taxa de Inadimplência PJ** devido a uma falha técnica momentânea no serviço de execução de consultas do modelo semântico.\n\nPelas regras de governança e integridade do Lumen, **não é permitido apresentar nenhum número que não tenha sido validado por meio de uma consulta direta e bem-sucedida à base certificada**.\n\nAssim que a integração da ferramenta for normalizada, poderei consultar e trazer os valores exatos da **Taxa de Inadimplência PJ** e suas variações. Por favor, tente novamente em instantes.",
+    "esperado": "2,49",
+    "acertou": false,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [],
+    "erro": "",
+    "passou": false
+  },
+  {
+    "caso": "variação anual",
+    "pergunta": "Quanto a taxa de inadimplência subiu em relação a um ano antes?",
+    "resposta": "",
+    "esperado": "",
+    "acertou": null,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [],
+    "erro": "Nenhum modelo disponível no momento (a API gratuita do Gemini recusa por alta demanda em picos). Tentativas — gemini-3.6-flash: cota esgotada; gemini-3.7-flash: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This mo; gemini-3.8-flash: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This mo; gemini-3.1-flash-lite: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This mo",
+    "passou": false
+  }
+]

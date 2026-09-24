@@ -1,0 +1,15 @@
+[
+  {
+    "caso": "continuação para PJ",
+    "pergunta": "E de pessoa jurídica?",
+    "resposta": "",
+    "esperado": "",
+    "acertou": null,
+    "recusou": null,
+    "sem_lastro": [],
+    "consultas": [],
+    "modelo": "",
+    "erro": "Nenhum modelo disponível no momento (a API gratuita do Gemini recusa por alta demanda em picos). Tentativas — gemini-3.1-flash-lite: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This mo; gemini-3.6-flash: cota esgotada; gemini-3.7-flash: cota esgotada; gemini-3.8-flash: cota esgotada",
+    "passou": false
+  }
+]
