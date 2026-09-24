@@ -15,6 +15,7 @@ para os dois rodarem nas mesmas condições de cota e horário.
 
 import argparse
 import json
+import os
 import sys
 import time
 from collections import defaultdict
@@ -24,7 +25,7 @@ from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
-from agent import avaliacao
+from agent import avaliacao, ritmo
 from agent.agente import Agente, ModelosIndisponiveis
 from evaluation.baseline_text2sql import MODELO, BaselineTextToSql
 from evaluation.corretor import corrigir
@@ -34,6 +35,13 @@ RESULTADOS = PASTA / "resultados"
 PAUSA_ENTRE_CHAMADAS = 8  # s
 ESPERA_POR_COTA = 70  # s: o limite gratuito é por minuto
 TENTATIVAS_POR_COTA = 10
+
+# O teto da cota gratuita é de tokens de ENTRADA por minuto (16.000 no
+# gemma-4-26b), e cada chamada com ferramenta reenvia a conversa inteira.
+# Uma pergunta que consulta várias vezes estoura o teto sozinha, e repetir
+# a pergunta só reproduz o estouro. Espaçar as chamadas resolve, e vale
+# para as duas abordagens: ver agent/ritmo.py e METODOLOGIA.md.
+PAUSA_FERRAMENTA = 20  # s
 
 ABORDAGENS = {
     "agente": lambda: Agente(modelo=MODELO),
@@ -55,6 +63,7 @@ def responder(abordagem: str, pergunta: dict) -> dict:
     """Uma pergunta, uma abordagem, sem histórico: cada pergunta é independente."""
     for tentativa in range(1, TENTATIVAS_POR_COTA + 1):
         respondente = ABORDAGENS[abordagem]()
+        ritmo.zerar()
         inicio = time.monotonic()
         try:
             resposta = respondente.perguntar(pergunta["pergunta"])
@@ -64,13 +73,17 @@ def responder(abordagem: str, pergunta: dict) -> dict:
             print(f"(sem cota, aguardando {ESPERA_POR_COTA}s)", end=" ", flush=True)
             time.sleep(ESPERA_POR_COTA)
             continue
-        latencia = time.monotonic() - inicio
+        # A espera imposta pela cota não é tempo de modelo, e sairia no
+        # indicador de latência como se fosse lentidão da abordagem.
+        espera = ritmo.dormido()
+        latencia = time.monotonic() - inicio - espera
         break
 
     nota = corrigir(pergunta, resposta.texto)
     registro = {
         "resposta": resposta.texto,
         "latencia_s": round(latencia, 1),
+        "espera_cota_s": round(espera, 1),
         "acertou": nota.acertou,
         "recusa_indevida": nota.recusa_indevida,
         "faltou": nota.faltou,
@@ -149,6 +162,9 @@ def placar(arquivo: Path) -> None:
 
 def main() -> int:
     load_dotenv()
+    # setdefault, e não atribuição: quem quiser reproduzir a rodada com
+    # outro espaçamento (ou sem nenhum) manda pela variável de ambiente.
+    os.environ.setdefault(ritmo.VARIAVEL, str(PAUSA_FERRAMENTA))
     parser = argparse.ArgumentParser(prog="python -m evaluation.benchmark")
     parser.add_argument("--rodada", default=datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%Y-%m-%d_%H%M"))
     parser.add_argument("--placar", type=Path)

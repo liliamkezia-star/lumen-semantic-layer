@@ -168,6 +168,30 @@ devem ser procurados de novo na rodada 2:
   PJ" virou a carteira PJ inteira); B10 mapeou "cheque especial" para a
   modalidade errada, em vez da submodalidade que existe no catálogo.
 
+**2026-09-24 — durante a rodada 2, com 115 das 120 respostas prontas.**
+As 5 últimas (F08 do baseline, F09 e F10 nas duas abordagens) falhavam de
+forma determinística com 429, mesmo depois de 9 esperas de 70 s. O erro
+cru mostrou que o teto não era de requisições por dia, mas de **tokens de
+entrada por minuto** (`GenerateContentInputTokensPerModelPerMinute`,
+16.000 no `gemma-4-26b`). Como cada chamada com ferramenta reenvia a
+conversa inteira, uma pergunta estoura o teto sozinha quando alguma
+consulta devolve muito texto — em F08, uma consulta ao catálogo de
+séries devolveu 17 mil caracteres. Repetir a pergunta só reproduzia o
+estouro.
+
+Correção: `agent/ritmo.py` espaça as chamadas **dentro** da pergunta
+(20 s entre ferramentas), ligado pelo runner para **as duas abordagens**,
+e desligado por padrão fora do benchmark. O espaçamento não muda nenhuma
+resposta, só o relógio — e para que não contamine o indicador, o tempo
+dormido é gravado à parte (`espera_cota_s`) e descontado da latência.
+
+Duas coisas ficam ditas, porque a mudança foi feita com a rodada em
+curso: ela atinge só as 5 respostas que faltavam, e é a única alteração
+da rodada 2 que não é anterior a qualquer resposta. Não foi preciso
+invalidar a rodada, porque o espaçamento não altera o que o modelo
+responde; mas quem repetir o experimento deve rodar as 120 com a pausa
+ligada, que é o comportamento agora padrão do runner.
+
 ## Limitações conhecidas
 - Um modelo só, e aberto: o resultado não se generaliza para modelos de
   ponta sem nova rodada.

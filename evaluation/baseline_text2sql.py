@@ -22,6 +22,7 @@ import yaml
 from google import genai
 from google.genai import errors, types
 
+from agent import ritmo
 from agent.agente import ChaveAusente, ModelosIndisponiveis
 from evaluation.sql_gold import executar_sql
 from evaluation.sql_seguro import SqlRecusado, validar_sql
@@ -43,6 +44,7 @@ def consultar_sql(consulta: str) -> str:
         consulta: uma única instrução SELECT em T-SQL (use TOP, não LIMIT),
             sobre as tabelas gold.fato_* e gold.dim_*.
     """
+    ritmo.espacar()
     try:
         validar_sql(consulta)
     except SqlRecusado as erro:
