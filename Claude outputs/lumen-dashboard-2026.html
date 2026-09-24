@@ -1,0 +1,1551 @@
+<title>Lumen · Dossiê de Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+
+<style>
+/* ===== TOKENS — derivados de powerbi/lumen_theme.json do próprio projeto ===== */
+:root{
+  --paper:#F4F6F7;
+  --surface:#FFFFFF;
+  --surface-2:#EAEDEF;
+  --rule:#DDE1E4;
+  --rule-2:#C3CACF;
+  --ink:#14181C;
+  --ink-2:#5B6470;
+  --ink-3:#8A9099;
+
+  --ochre:#A67821;
+  --ochre-2:#B99968;
+  --ochre-tint:#F5EEDF;
+  --slate:#3E4C59;
+
+  --good:#1E6F58;
+  --bad:#A13A30;
+  --bad-tint:#F7E9E7;
+  --warn:#8A6212;
+
+  --maxw:70rem;
+  --measure:68ch;
+  --s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--s7:48px;--s8:64px;--s9:96px;
+
+  --f-serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --f-sans:"Public Sans","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#101315;
+    --surface:#181C1F;
+    --surface-2:#20262A;
+    --rule:#2A3136;
+    --rule-2:#3D464C;
+    --ink:#E6E9EB;
+    --ink-2:#AEB6BC;
+    --ink-3:#848D94;
+    --ochre:#D6A34A;
+    --ochre-2:#B99968;
+    --ochre-tint:#2A2116;
+    --slate:#9FB0BE;
+    --good:#4FA286;
+    --bad:#DC7C72;
+    --bad-tint:#2C1A18;
+    --warn:#C79A3E;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#101315;--surface:#181C1F;--surface-2:#20262A;--rule:#2A3136;--rule-2:#3D464C;
+  --ink:#E6E9EB;--ink-2:#AEB6BC;--ink-3:#848D94;--ochre:#D6A34A;--ochre-2:#B99968;
+  --ochre-tint:#2A2116;--slate:#9FB0BE;--good:#4FA286;--bad:#DC7C72;--bad-tint:#2C1A18;--warn:#C79A3E;
+}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--ochre);text-decoration:none;border-bottom:1px solid color-mix(in srgb,var(--ochre) 35%,transparent)}
+a:hover{border-bottom-color:var(--ochre)}
+a:focus-visible{outline:2px solid var(--ochre);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-serif);font-weight:600;line-height:1.2;margin:0;text-wrap:balance}
+h4{font-family:var(--f-sans);font-weight:600;font-size:.95rem;margin:0}
+p{margin:0}
+ul,ol{margin:0;padding-left:1.15em}
+li{margin:0 0 var(--s2)}
+code{font-family:var(--f-mono);font-size:.84em;background:var(--surface-2);padding:1px 5px;border-radius:3px}
+pre{font-family:var(--f-mono);font-size:.76rem;line-height:1.6;margin:0;white-space:pre;overflow-x:auto}
+
+.shell{max-width:92rem;margin:0 auto;padding:0 var(--s5)}
+.layout{display:grid;grid-template-columns:16rem minmax(0,1fr);gap:var(--s8);align-items:start}
+@media(max-width:1000px){.layout{grid-template-columns:1fr;gap:var(--s5)}}
+
+.nav{position:sticky;top:0;max-height:100vh;overflow-y:auto;padding:var(--s7) var(--s4) var(--s7) 0;border-right:1px solid var(--rule)}
+@media(max-width:1000px){.nav{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--rule);padding:var(--s4) 0}}
+.nav .act{font-family:var(--f-mono);font-size:.62rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ochre);margin:var(--s5) 0 var(--s2)}
+.nav .act:first-child{margin-top:0}
+.nav ol{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:1px}
+@media(max-width:1000px){.nav ol{flex-direction:row;flex-wrap:wrap;gap:var(--s2)}}
+.nav a{display:flex;gap:var(--s2);padding:2px 0;font-size:.82rem;line-height:1.35;color:var(--ink-2);border:0}
+.nav a:hover{color:var(--ochre)}
+.nav a .n{font-family:var(--f-mono);font-size:.7rem;color:var(--ink-3);flex:0 0 1.5em}
+.main{padding:var(--s7) 0 var(--s9);min-width:0}
+.prose{max-width:var(--measure)}
+.stack{display:flex;flex-direction:column;gap:var(--s4)}
+.stack-lg{display:flex;flex-direction:column;gap:var(--s6)}
+
+/* hero */
+.hero{border-bottom:3px double var(--rule-2);padding-bottom:var(--s6);margin-bottom:var(--s6)}
+.eyebrow{font-family:var(--f-mono);font-size:.68rem;letter-spacing:.16em;text-transform:uppercase;color:var(--ochre);margin-bottom:var(--s3)}
+h1{font-size:clamp(2rem,4.6vw,3rem);letter-spacing:-.015em;margin-bottom:var(--s3)}
+.dek{font-size:1.08rem;color:var(--ink-2);max-width:56ch}
+.factbar{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:var(--s6)}
+.factbar div{background:var(--surface);padding:var(--s3) var(--s4)}
+.factbar .k{font-family:var(--f-mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+.factbar .v{font-family:var(--f-serif);font-size:1.35rem;font-weight:600;line-height:1.25;font-variant-numeric:tabular-nums}
+
+section{padding-top:var(--s8);scroll-margin-top:var(--s3)}
+.sec-head{display:flex;gap:var(--s4);align-items:baseline;border-top:1px solid var(--rule-2);padding-top:var(--s4);margin-bottom:var(--s5)}
+.sec-num{font-family:var(--f-mono);font-size:.74rem;color:var(--ochre);flex:0 0 auto;padding-top:.4em}
+h2{font-size:clamp(1.45rem,3vw,1.95rem);letter-spacing:-.012em}
+h3{font-size:1.15rem;margin:var(--s6) 0 var(--s3)}
+h4{margin:var(--s5) 0 var(--s2)}
+
+/* veredictos — motivo do projeto: cultura de ADR */
+.verdict{border:1px solid var(--rule);background:var(--surface);padding:var(--s4) var(--s5);border-left-width:5px}
+.verdict .vt{font-family:var(--f-mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:var(--s2)}
+.verdict h4{margin:0 0 var(--s2);font-size:1rem}
+.verdict p{font-size:.93rem;color:var(--ink-2)}
+.verdict p + p{margin-top:var(--s2)}
+.v-keep{border-left-color:var(--good)} .v-keep .vt{color:var(--good)}
+.v-improve{border-left-color:var(--ochre)} .v-improve .vt{color:var(--ochre)}
+.v-remove{border-left-color:var(--bad)} .v-remove .vt{color:var(--bad)}
+.v-swap{border-left-color:var(--slate)} .v-swap .vt{color:var(--slate)}
+.v-add{border-left-color:var(--ink);border-left-style:dashed} .v-add .vt{color:var(--ink-2)}
+
+/* problemas */
+.prob{display:grid;grid-template-columns:5.2rem 1fr;gap:var(--s4);border-bottom:1px solid var(--rule);padding:var(--s4) 0}
+@media(max-width:640px){.prob{grid-template-columns:1fr;gap:var(--s2)}}
+.sev{font-family:var(--f-mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;padding:3px 7px;text-align:center;height:fit-content;border:1px solid}
+.sev.s1{color:var(--bad);border-color:var(--bad);background:var(--bad-tint)}
+.sev.s2{color:var(--warn);border-color:var(--warn)}
+.sev.s3{color:var(--ink-2);border-color:var(--rule-2)}
+.prob h4{margin:0 0 var(--s2)}
+.prob p{font-size:.93rem;color:var(--ink-2)}
+.prob p+p{margin-top:var(--s2)}
+.prob .fix{font-size:.9rem;border-left:2px solid var(--ochre);padding-left:var(--s3);margin-top:var(--s3);color:var(--ink)}
+
+/* tabelas */
+.tw{overflow-x:auto;border:1px solid var(--rule);background:var(--surface);margin:var(--s4) 0}
+table{border-collapse:collapse;width:100%;font-size:.85rem;min-width:36rem}
+th,td{text-align:left;padding:var(--s3) var(--s4);border-bottom:1px solid var(--rule);vertical-align:top}
+thead th{font-family:var(--f-mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);background:var(--surface-2);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.up{color:var(--bad);font-weight:600}
+.dn{color:var(--good);font-weight:600}
+
+/* wireframe */
+.wire{display:grid;gap:5px;font-family:var(--f-mono);font-size:.63rem;color:var(--ink-3);line-height:1.35}
+.wire div{background:var(--surface-2);border:1px solid var(--rule);padding:7px;display:flex;align-items:center;justify-content:center;text-align:center;min-height:36px}
+.wire .hl{border-color:var(--ochre);background:var(--ochre-tint);color:var(--ochre)}
+.wire .em{border-color:var(--ink-2);color:var(--ink);background:var(--surface)}
+.wire .gh{border-style:dashed;background:transparent}
+
+.spec{background:var(--surface);border:1px solid var(--rule);padding:var(--s5);margin:var(--s4) 0}
+.spec-label{font-family:var(--f-mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-bottom:var(--s4)}
+
+.kv{display:grid;grid-template-columns:12rem 1fr;gap:var(--s2) var(--s4);font-size:.9rem}
+@media(max-width:620px){.kv{grid-template-columns:1fr;gap:1px var(--s4)}.kv dt{margin-top:var(--s3)}}
+.kv dt{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);padding-top:.3em}
+.kv dd{margin:0}
+
+.grid{display:grid;gap:var(--s4)}
+.g2{grid-template-columns:repeat(auto-fit,minmax(290px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+
+.note{padding:var(--s4) var(--s5);font-size:.93rem;background:var(--surface);border-left:4px solid var(--ochre)}
+.note .tag{display:block;font-family:var(--f-mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ochre);margin-bottom:var(--s2)}
+.note.warnbox{border-left-color:var(--bad)}
+.note.warnbox .tag{color:var(--bad)}
+
+/* KPI mock */
+.kpirow{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--s3)}
+.kpi{background:var(--surface);border:1px solid var(--rule);border-radius:4px;padding:12px 14px}
+.kpi.focus{border-color:var(--ochre);box-shadow:inset 3px 0 0 var(--ochre)}
+.kpi .kn{font-size:.72rem;color:var(--ink-2);letter-spacing:.02em}
+.kpi .kv2{font-family:var(--f-serif);font-size:1.85rem;font-weight:600;line-height:1.15;margin-top:1px}
+.kpi .kc{font-size:.76rem;color:var(--ink-2);font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi .kf{font-family:var(--f-mono);font-size:.63rem;color:var(--ink-3);margin-top:7px;border-top:1px dotted var(--rule);padding-top:5px}
+.kpi .track{height:4px;background:var(--surface-2);margin-top:8px;position:relative;border-radius:2px;overflow:hidden}
+.kpi .track i{position:absolute;left:0;top:0;bottom:0;background:var(--ochre)}
+.kpi .track b{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink)}
+
+.chips{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s2)}
+.chip{font-family:var(--f-mono);font-size:.64rem;letter-spacing:.05em;padding:2px 8px;border:1px solid var(--rule-2);border-radius:999px;color:var(--ink-2);white-space:nowrap}
+.chip.on{border-color:var(--ochre);color:var(--ochre)}
+.chip.off{border-color:var(--bad);color:var(--bad)}
+
+.check{list-style:none;padding:0;display:flex;flex-direction:column;gap:var(--s2)}
+.check li{display:flex;gap:var(--s3);font-size:.91rem;padding-bottom:var(--s2);border-bottom:1px dotted var(--rule)}
+.check li::before{content:"";flex:0 0 13px;height:13px;margin-top:5px;border:1.5px solid var(--rule-2)}
+
+.phase{border-left:2px solid var(--rule-2);padding-left:var(--s5);position:relative}
+.phase::before{content:"";position:absolute;left:-6px;top:9px;width:10px;height:10px;background:var(--ochre);border-radius:50%}
+.phase .ph{font-family:var(--f-mono);font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ochre)}
+
+.footer{margin-top:var(--s9);border-top:3px double var(--rule-2);padding:var(--s5) 0 var(--s8);font-size:.83rem;color:var(--ink-3)}
+html{scroll-behavior:smooth}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="shell">
+<div class="layout">
+
+<nav class="nav" aria-label="Índice">
+  <div class="act">Ato 1 · Diagnóstico</div>
+  <ol>
+    <li><a href="#s01"><span class="n">01</span><span>O que o Lumen é</span></a></li>
+    <li><a href="#s02"><span class="n">02</span><span>Auditoria dos dados</span></a></li>
+    <li><a href="#s03"><span class="n">03</span><span>Auditoria do que já existe</span></a></li>
+    <li><a href="#s04"><span class="n">04</span><span>Problemas encontrados</span></a></li>
+  </ol>
+  <div class="act">Ato 2 · Estratégia</div>
+  <ol>
+    <li><a href="#s05"><span class="n">05</span><span>Pesquisa → princípio → aplicação</span></a></li>
+    <li><a href="#s06"><span class="n">06</span><span>Estratégia do dashboard</span></a></li>
+    <li><a href="#s07"><span class="n">07</span><span>Arquitetura da informação</span></a></li>
+  </ol>
+  <div class="act">Ato 3 · Design</div>
+  <ol>
+    <li><a href="#s08"><span class="n">08</span><span>Wireframes</span></a></li>
+    <li><a href="#s09"><span class="n">09</span><span>Design system</span></a></li>
+    <li><a href="#s10"><span class="n">10</span><span>KPIs</span></a></li>
+    <li><a href="#s11"><span class="n">11</span><span>Escolha dos gráficos</span></a></li>
+    <li><a href="#s12"><span class="n">12</span><span>Hierarquia e storytelling</span></a></li>
+    <li><a href="#s13"><span class="n">13</span><span>Interação e tooltips</span></a></li>
+    <li><a href="#s14"><span class="n">14</span><span>Acessibilidade e resoluções</span></a></li>
+  </ol>
+  <div class="act">Ato 4 · Execução</div>
+  <ol>
+    <li><a href="#s15"><span class="n">15</span><span>Especificação Power BI</span></a></li>
+    <li><a href="#s16"><span class="n">16</span><span>Especificação Figma</span></a></li>
+    <li><a href="#s17"><span class="n">17</span><span>Antes e depois</span></a></li>
+    <li><a href="#s18"><span class="n">18</span><span>Benchmark de contratação</span></a></li>
+    <li><a href="#s19"><span class="n">19</span><span>Checklist de qualidade</span></a></li>
+    <li><a href="#s20"><span class="n">20</span><span>Plano de implementação</span></a></li>
+  </ol>
+</nav>
+
+<main class="main">
+
+<header class="hero">
+  <div class="eyebrow">Projeto Lumen · Sprint 7 · dossiê de design</div>
+  <h1>Do modelo semântico ao dashboard</h1>
+  <p class="dek">Auditoria do repositório e dos 34,4 milhões de linhas, e a proposta de design que transforma a camada semântica do Lumen em um produto analítico defensável.</p>
+  <div class="factbar">
+    <div><div class="k">Fato principal</div><div class="v">34.461.901</div></div>
+    <div><div class="k">Competências</div><div class="v">132</div></div>
+    <div><div class="k">Janela</div><div class="v">2015–2025</div></div>
+    <div><div class="k">Medidas hoje</div><div class="v">7</div></div>
+    <div><div class="k">Páginas hoje</div><div class="v">1 mock</div></div>
+    <div><div class="k">Metas nos dados</div><div class="v">0</div></div>
+  </div>
+</header>
+
+<div class="prose stack">
+  <div class="note"><span class="tag">Como este documento foi produzido</span>
+    Li o repositório inteiro em <code>C:\Users\pc\Documents\lumen-semantic-layer</code> — README, arquitetura, dicionário de dados, os 9 ADRs, os 6 modelos <code>marts</code> do dbt, o tema JSON e o PNG de fundo da página Visão Geral. Depois consultei o <code>lumen.duckdb</code> local em modo somente-leitura e rodei as agregações que sustentam cada número citado aqui. <strong>Nenhum valor deste documento foi inventado.</strong> Onde um dado seria necessário e não existe no projeto, está escrito assim.
+  </div>
+</div>
+
+<!-- ==================== 01 ==================== -->
+<section id="s01">
+  <div class="sec-head"><span class="sec-num">01</span><h2>O que o Lumen é — e qual é o problema de negócio</h2></div>
+  <div class="prose stack-lg">
+
+    <div class="stack">
+      <p>O Lumen constrói uma camada semântica certificada sobre dados públicos de crédito e indicadores econômicos brasileiros (Banco Central e IBGE), com um agente analítico governado que responde perguntas em linguagem natural <em>sem gerar SQL ou DAX livre</em> — apenas sobre métricas certificadas.</p>
+      <p>Isso é decisivo para o design: <strong>o dashboard não é o produto final do Lumen. Ele é a prova de que a camada semântica está certa.</strong> Toda decisão de design aqui responde a essa dupla função — ser útil a um leitor humano e ser a demonstração visível de que as medidas do modelo são confiáveis.</p>
+    </div>
+
+    <div class="spec">
+      <div class="spec-label">Contexto de negócio — o assunto real dos dados</div>
+      <dl class="kv">
+        <dt>Domínio</dt><dd>Mercado de crédito brasileiro: saldo, qualidade da carteira e risco, por UF, modalidade, segmento e perfil de cliente</dd>
+        <dt>Fontes</dt><dd>SCR.data (BCB) — detalhe; SGS (BCB) — séries consolidadas oficiais; IBGE — localidades e população</dd>
+        <dt>Granularidade do fato</dt><dd>1 linha por competência mensal × UF × modalidade × segmento — <strong>132 competências</strong>, jan/2015 a dez/2025, ~310 mil linhas por mês</dd>
+        <dt>Natureza das métricas</dt><dd>Saldos (estoque) semiaditivos + contagem de operações. <strong>Não há fluxo, não há meta, não há orçamento.</strong></dd>
+      </dl>
+    </div>
+
+    <div class="stack">
+      <h3>Público-alvo — três leitores, não um</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Leitor</th><th>O que ele quer</th><th>Decisão que toma</th><th>Consequência de design</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Recrutador técnico / avaliador</strong><br><small>o leitor real hoje</small></td><td>Ver se você sabe modelar, medir e comunicar</td><td>Chamar ou não para entrevista</td><td>A página precisa provar rigor, não só beleza: procedência, definição de métrica, tratamento de qualidade visíveis</td></tr>
+            <tr><td><strong>Analista de risco / crédito</strong><br><small>o leitor simulado</small></td><td>Saber onde a carteira está se deteriorando</td><td>Onde concentrar revisão de política de crédito</td><td>Precisa de caminho do agregado ao segmento, com números comparáveis</td></tr>
+            <tr><td><strong>O agente analítico</strong><br><small>Sprint 7+</small></td><td>Medidas que respondam certo sem contexto de filtro</td><td>Que número devolver ao usuário</td><td>Toda medida exposta precisa ser correta <em>sem</em> filtro — é o achado mais importante desta auditoria</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="stack">
+      <h3>As perguntas de negócio que os dados conseguem responder</h3>
+      <p>Derivadas do que existe no star schema — não de um template genérico:</p>
+      <ol>
+        <li>O crédito no Brasil está crescendo com qualidade, ou o crescimento está vindo acompanhado de deterioração?</li>
+        <li>A deterioração está distribuída ou concentrada? Em quais UFs, modalidades e perfis de cliente?</li>
+        <li>Pessoa física e pessoa jurídica estão se comportando de forma diferente?</li>
+        <li>O que o contexto macro (Selic, spread, endividamento das famílias, concessões) diz sobre esse movimento?</li>
+        <li>Os números do projeto batem com os números oficiais publicados pelo Banco Central?</li>
+      </ol>
+      <div class="note"><span class="tag">Pergunta 5 é o diferencial</span>Quase nenhum dashboard de portfólio responde "meus números batem com a fonte oficial?". O Lumen já tem a reconciliação feita e versionada em <code>tests/reconciliar_totais.py</code>. Não colocar isso na tela é desperdiçar o ativo mais raro do projeto.</div>
+    </div>
+
+    <div class="stack">
+      <h3>Perguntas que os dados <em>não</em> respondem</h3>
+      <ul>
+        <li><strong>Desempenho vs meta.</strong> Não existe meta, orçamento ou target em nenhuma tabela. <em>Dado necessário, mas não disponível no projeto.</em> A referência disponível é temporal (ano anterior) e externa (série oficial do BCB).</li>
+        <li><strong>Crédito por instituição.</strong> O SCR.data agregado não identifica instituição financeira — só o tipo de segmento (Banco, Financeira, Cooperativa, Fintech, etc.).</li>
+        <li><strong>Perfil de prazo na Gold.</strong> As 8 colunas de faixa de vencimento existem na Silver mas, por decisão registrada, não foram propagadas para <code>gold.fato_credito</code>.</li>
+        <li><strong>Crédito per capita ou por PIB estadual.</strong> <code>silver.populacao_uf</code> existe (297 linhas) mas não virou dimensão. PIB estadual não está no projeto.</li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
+<!-- ==================== 02 ==================== -->
+<section id="s02">
+  <div class="sec-head"><span class="sec-num">02</span><h2>Auditoria dos dados — o que eu encontrei consultando o banco</h2></div>
+  <div class="prose stack">
+    <p>Consultas rodadas em <code>lumen.duckdb</code> (somente leitura). Estes números são o material bruto do design — a página só pode contar a história que eles sustentam.</p>
+  </div>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Métrica (dez de cada ano)</th><th class="num">2020</th><th class="num">2022</th><th class="num">2023</th><th class="num">2024</th><th class="num">2025</th><th class="num">Δ 24→25</th></tr></thead>
+      <tbody>
+        <tr><td>Carteira ativa (R$ Tri)</td><td class="num">4,204</td><td class="num">5,511</td><td class="num">5,966</td><td class="num">6,689</td><td class="num">7,444</td><td class="num up">+11,3%</td></tr>
+        <tr><td>Ativo problemático (R$ Bi)</td><td class="num">287,6</td><td class="num">402,0</td><td class="num">430,1</td><td class="num">435,4</td><td class="num">570,3</td><td class="num up">+31,0%</td></tr>
+        <tr><td>Carteira vencida (R$ Bi)</td><td class="num">61,2</td><td class="num">114,3</td><td class="num">128,6</td><td class="num">142,6</td><td class="num">232,5</td><td class="num up">+63,0%</td></tr>
+        <tr><td>Carteira inadimplência (R$ Bi)</td><td class="num">86,0</td><td class="num">161,2</td><td class="num">185,5</td><td class="num">200,1</td><td class="num">305,5</td><td class="num up">+52,7%</td></tr>
+        <tr><td>Taxa de inadimplência</td><td class="num">2,05%</td><td class="num">2,93%</td><td class="num">3,11%</td><td class="num">2,99%</td><td class="num">4,10%</td><td class="num up">+1,11 pp</td></tr>
+        <tr><td>Taxa de ativo problemático</td><td class="num">6,84%</td><td class="num">7,29%</td><td class="num">7,21%</td><td class="num">6,51%</td><td class="num">7,66%</td><td class="num up">+1,15 pp</td></tr>
+        <tr><td>Número de operações (Mi)</td><td class="num">433,6</td><td class="num">589,9</td><td class="num">650,8</td><td class="num">774,3</td><td class="num">928,6</td><td class="num">+19,9%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose stack">
+    <h3>Onde a deterioração está — a resposta que o mock atual promete e não entrega</h3>
+    <p>O mock termina dizendo "abrir a camada de Diagnóstico para identificar em quais UF e modalidades o aumento de 63,1% na carteira vencida está concentrado". Rodei essa consulta. A resposta é específica e é boa demais para ficar de fora:</p>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Corte</th><th>Carteira dez/25</th><th class="num">Inad. dez/24</th><th class="num">Inad. dez/25</th><th class="num">Δ pp</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Pessoa Física</strong></td><td class="num">R$ 4,525 Tri</td><td class="num">3,66%</td><td class="num">5,15%</td><td class="num up">+1,49</td></tr>
+          <tr><td><strong>Pessoa Jurídica</strong></td><td class="num">R$ 2,919 Tri</td><td class="num">1,97%</td><td class="num">2,49%</td><td class="num">+0,52</td></tr>
+          <tr><td colspan="5" style="background:var(--surface-2);font-family:var(--f-mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)">Modalidades — maior salto relativo</td></tr>
+          <tr><td>Financiamentos rurais</td><td class="num">R$ 826,8 Bi</td><td class="num">1,93%</td><td class="num">5,08%</td><td class="num up">+3,15</td></tr>
+          <tr><td>Empréstimos</td><td class="num">R$ 2.588,2 Bi</td><td class="num">6,28%</td><td class="num">7,73%</td><td class="num up">+1,45</td></tr>
+          <tr><td>Financiamentos</td><td class="num">R$ 1.276,0 Bi</td><td class="num">2,00%</td><td class="num">2,89%</td><td class="num">+0,89</td></tr>
+          <tr><td>Financiamentos imobiliários</td><td class="num">R$ 1.403,2 Bi</td><td class="num">1,06%</td><td class="num">1,08%</td><td class="num">+0,02</td></tr>
+          <tr><td colspan="5" style="background:var(--surface-2);font-family:var(--f-mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)">Segmento × porte — os extremos</td></tr>
+          <tr><td>Banco · acima de 20 salários mínimos</td><td class="num">R$ 814,8 Bi</td><td class="num">2,14%</td><td class="num">5,01%</td><td class="num up">+2,87</td></tr>
+          <tr><td>Financeira · até 1 salário mínimo</td><td class="num">R$ 50,8 Bi</td><td class="num">10,82%</td><td class="num">20,84%</td><td class="num up">+10,02</td></tr>
+          <tr><td colspan="5" style="background:var(--surface-2);font-family:var(--f-mono);font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)">UF — maior deterioração relativa</td></tr>
+          <tr><td>Maranhão</td><td class="num">R$ 111,8 Bi</td><td class="num">4,45%</td><td class="num">7,56%</td><td class="num up">+3,11</td></tr>
+          <tr><td>Goiás</td><td class="num">R$ 338,3 Bi</td><td class="num">3,77%</td><td class="num">5,85%</td><td class="num up">+2,08</td></tr>
+          <tr><td>Rio Grande do Sul</td><td class="num">R$ 526,9 Bi</td><td class="num">2,15%</td><td class="num">4,06%</td><td class="num up">+1,91</td></tr>
+          <tr><td>Mato Grosso</td><td class="num">R$ 260,7 Bi</td><td class="num">3,00%</td><td class="num">5,38%</td><td class="num up">+2,38</td></tr>
+          <tr><td>São Paulo</td><td class="num">R$ 2.239,5 Bi</td><td class="num">2,70%</td><td class="num">3,24%</td><td class="num">+0,54</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note"><span class="tag">A história que o dado conta</span>
+      Existe uma narrativa coerente aqui, e ela não é "SP é o maior". É esta: <strong>o crédito rural quebrou.</strong> Financiamentos rurais saíram de 1,93% para 5,08% de inadimplência em 12 meses — o maior salto relativo de todas as modalidades — e os estados que mais se deterioraram (RS +1,91 pp, MT +2,38 pp, GO +2,08 pp, MA +3,11 pp) são exatamente estados de peso agrícola. Ao mesmo tempo, o crédito imobiliário ficou praticamente parado em 1,08%. Não é uma crise de crédito generalizada: <strong>é uma crise setorial dentro de uma carteira que cresce.</strong>
+      <br><br>Nenhuma dessas conclusões cabe num cartão de KPI. Todas cabem numa arquitetura de quatro páginas.
+    </div>
+
+    <div class="note warnbox"><span class="tag">Ressalva sobre esta leitura</span>
+      A correlação entre modalidade rural e UFs agrícolas é forte no dado, mas <strong>não testei a causalidade</strong> — não cruzei modalidade × UF na mesma consulta. Antes de escrever isso como conclusão na página, rode o cruzamento. É exatamente o tipo de afirmação que um avaliador sênior vai querer conferir.
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 03 ==================== -->
+<section id="s03">
+  <div class="sec-head"><span class="sec-num">03</span><h2>Auditoria do que já existe</h2></div>
+  <div class="prose"><p style="margin-bottom:var(--s5)">Veredicto por artefato, com o motivo. O projeto tem uma cultura de decisão registrada — então cada veredicto abaixo está no formato de uma decisão, não de uma opinião.</p></div>
+
+  <div class="grid g2">
+
+    <div class="verdict v-keep">
+      <span class="vt">Manter</span>
+      <h4>O star schema</h4>
+      <p>4 dimensões + 2 fatos, chave substituta por <code>hash()</code> UBIGINT em vez de sequencial, INNER JOIN nas dimensões derivadas do fato e LEFT JOIN nas independentes — com a justificativa escrita no próprio SQL.</p>
+      <p>Isso está acima do nível que se vê em portfólio. Não mexa.</p>
+    </div>
+
+    <div class="verdict v-keep">
+      <span class="vt">Manter</span>
+      <h4>A cultura de ADR e o dicionário de dados</h4>
+      <p>Nove ADRs, incluindo dois que registram <em>correções</em> de arquitetura apontadas em revisão. O dicionário documenta o valor sentinela <code>-1</code>, a inconsistência 2015–2016 e a reconciliação com o BCB, sempre separando o que foi verificado do que é hipótese.</p>
+      <p>É o ativo mais valioso do repositório e precisa aparecer no dashboard, não só no GitHub.</p>
+    </div>
+
+    <div class="verdict v-keep">
+      <span class="vt">Manter</span>
+      <h4>Direct Lake sobre a Gold</h4>
+      <p>Modelo construído programaticamente via TOM/XMLA, sem cópia dos 34,4M de linhas, com <code>dim_calendario</code> marcada como tabela de data. A alternativa Import está corretamente descartada no ADR-009.</p>
+    </div>
+
+    <div class="verdict v-keep">
+      <span class="vt">Manter</span>
+      <h4>O headline conclusivo do mock</h4>
+      <p>"Carteira cresce 11,3%, mas a qualidade piora 3x mais rápido" é um título que dá a resposta em vez de nomear a área. Isso é raro e é exatamente o padrão dos melhores exemplos da pesquisa.</p>
+      <p>Verifiquei os números: 31,0% ÷ 11,3% = <strong>2,74×</strong>. "3x" é arredondamento defensável, mas o número exato é melhor — e melhor ainda calculado por medida, não escrito à mão.</p>
+    </div>
+
+    <div class="verdict v-improve">
+      <span class="vt">Melhorar</span>
+      <h4>O tema JSON</h4>
+      <p>A paleta está certa: ocre como acento único, escala de slates como neutro, semânticas separadas. Isso já é 2026.</p>
+      <p>Três problemas: (a) <code>maximum</code> é o ocre — então formatação condicional pinta o <em>pior</em> valor com a cor da marca; (b) o eixo de valor está desligado em <code>columnChart</code>, o que deixa séries temporais sem escala legível; (c) <code>visualHeader: show false</code> remove modo foco, "Mostrar como tabela" e navegação por teclado para todos os usuários.</p>
+      <p>Gravei uma v2 corrigida em <code>powerbi/lumen_theme_v2.json</code>.</p>
+    </div>
+
+    <div class="verdict v-improve">
+      <span class="vt">Melhorar</span>
+      <h4>Georgia nos números</h4>
+      <p>Georgia tem algarismos de estilo antigo — o 4 e o 7 descem abaixo da linha de base. No número grande do KPI isso vira assinatura editorial e funciona muito bem. Mantenha.</p>
+      <p>Mas os mesmos algarismos <strong>não alinham em coluna</strong>. Georgia nunca deve aparecer em tabela, matriz ou eixo. A v2 do tema separa isso explicitamente.</p>
+    </div>
+
+    <div class="verdict v-swap">
+      <span class="vt">Substituir</span>
+      <h4>As 7 medidas certificadas</h4>
+      <p>Todas usam <code>SUM()</code> direto sobre colunas de saldo. O próprio dicionário de dados classifica essas colunas como semiaditivas e adverte que não devem ser somadas ao longo do tempo.</p>
+      <p>O ADR-009 registra o sintoma sem identificá-lo: <code>[Carteira Ativa Total]</code> = R$ 584,27 <em>trilhões</em>. O saldo real de dez/2025 é R$ 7,44 trilhões. A medida somou 132 competências.</p>
+      <p>Substituí por <code>LASTNONBLANKVALUE</code> em <code>powerbi/medidas_certificadas_v2.dax</code>. Detalhe em <a href="#s04">§04</a>.</p>
+    </div>
+
+    <div class="verdict v-remove">
+      <span class="vt">Remover</span>
+      <h4>A imagem de fundo do Figma</h4>
+      <p><code>lumen_visao_geral_background.png</code> desenha os cartões brancos e as bordas. Isso quebra em qualquer mudança de resolução, impede formatação condicional no container, não é lido por leitor de tela e cria manutenção dupla — mexer no layout vira reexportar imagem.</p>
+      <p>A v2 do tema devolve o container ao Power BI: <code>background</code> branco, <code>border</code> #E3E7EA raio 4, sem sombra. O PNG deixa de ser necessário.</p>
+    </div>
+
+    <div class="verdict v-remove">
+      <span class="vt">Remover</span>
+      <h4>O gráfico de eixo duplo sem eixos</h4>
+      <p>Barra (carteira) + linha (taxa) sem nenhum eixo de valor rotulado. Só um ponto tem rótulo — o 4,10% da ponta. O leitor consegue ver a forma; não consegue ler valor nenhum.</p>
+      <p>Eixo duplo é aceito em 2026 <em>com salvaguardas</em>. Sem eixo em nenhum dos dois lados não é salvaguarda, é ilegibilidade.</p>
+    </div>
+
+    <div class="verdict v-remove">
+      <span class="vt">Remover</span>
+      <h4>O ranking "carteira ativa por UF (top 5)"</h4>
+      <p>SP tem mais crédito que MG, RJ, PR e RS somados. Isso é verdade — e é uma informação sobre o PIB de São Paulo, não sobre crédito. O ranking por tamanho absoluto num país com a concentração econômica do Brasil sempre devolve a mesma lista.</p>
+      <p>Além disso, as barras usam trilho cinza como se fossem bullet charts, mas não há meta — o trilho não codifica nada.</p>
+    </div>
+
+    <div class="verdict v-add">
+      <span class="vt">Adicionar</span>
+      <h4>Dimensão de população e métricas normalizadas</h4>
+      <p><code>silver.populacao_uf</code> tem 297 linhas e nunca virou dimensão. Com ela, "crédito per capita por UF" substitui o ranking trivial por um que informa.</p>
+      <p>Ressalva a declarar na tela: <strong>2022 e 2023 estão ausentes na fonte</strong> (pausa do IBGE durante o Censo).</p>
+    </div>
+
+    <div class="verdict v-add">
+      <span class="vt">Adicionar</span>
+      <h4>Página de notas metodológicas</h4>
+      <p>A reconciliação com o BCB, o tratamento do <code>-1</code>, a inconsistência 2015–2016, a defasagem entre SCR e SGS e a definição de cada medida existem no repositório e não existem na tela.</p>
+      <p>Numa avaliação de senioridade, essa página vale mais que qualquer gráfico.</p>
+    </div>
+
+    <div class="verdict v-add">
+      <span class="vt">Adicionar</span>
+      <h4>Três páginas de aprofundamento</h4>
+      <p>O mock promete "abrir a camada de Diagnóstico" e não há camada. Uma página só não sustenta a narrativa que o próprio headline abre.</p>
+    </div>
+
+    <div class="verdict v-add">
+      <span class="vt">Adicionar</span>
+      <h4>Títulos e insights calculados por medida</h4>
+      <p>Hoje o headline e o bloco de diagnóstico são texto fixo. Quando a Gold for recarregada com jan/2026, o título continuará dizendo 11,3%.</p>
+      <p>Num projeto cujo próximo passo é um agente que lê métricas certificadas, texto fixo é incoerente com a tese.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- ==================== 04 ==================== -->
+<section id="s04">
+  <div class="sec-head"><span class="sec-num">04</span><h2>Problemas encontrados</h2></div>
+  <div class="prose"><p style="margin-bottom:var(--s4)">Em ordem de risco. Os três primeiros afetam a correção do número, não a aparência.</p></div>
+
+  <div class="prose">
+
+    <div class="prob">
+      <div class="sev s1">Crítico</div>
+      <div>
+        <h4>P1 · As medidas certificadas somam estoque ao longo do tempo</h4>
+        <p>As 7 medidas do modelo <code>lumen_semantico</code> usam <code>SUM()</code> sobre <code>carteira_ativa</code>, <code>carteira_vencida</code>, <code>carteira_a_vencer</code>, <code>carteira_inadimplencia</code> e <code>ativo_problematico</code>. O dicionário de dados classifica todas como semiaditivas e diz textualmente que não devem ser somadas ao longo do tempo.</p>
+        <p>O ADR-009 registra a validação: <code>[Carteira Ativa Total]</code> = R$ 584,27 trilhões. Esse número é a soma das 132 competências. O PIB do Brasil é da ordem de R$ 12 trilhões — o modelo publica, como métrica certificada, um valor 48 vezes maior que o PIB.</p>
+        <p>O impacto real não é no dashboard, onde há filtro de competência. É no <strong>agente da Sprint 7</strong>: perguntado "qual o saldo total de crédito?", ele vai responder 584 trilhões, com a autoridade de uma métrica certificada.</p>
+        <p class="fix"><strong>Correção:</strong> <code>Carteira Ativa = LASTNONBLANKVALUE(dim_calendario[data], SUM(fato_credito[carteira_ativa]))</code>. Escrito, com as demais, em <code>powerbi/medidas_certificadas_v2.dax</code>.</p>
+      </div>
+    </div>
+
+    <div class="prob">
+      <div class="sev s1">Crítico</div>
+      <div>
+        <h4>P2 · Duas fontes de "inadimplência" no mesmo modelo, sem rótulo</h4>
+        <p>A taxa calculada do SCR.data para dez/2025 é <strong>4,10%</strong>. A série oficial do BCB (SGS 21082), que está dentro do mesmo modelo em <code>fato_indicador_macro</code>, diz <strong>4,20%</strong> para a mesma competência. Em jun/2025, 3,74% contra 3,75%.</p>
+        <p>As duas convergem — é uma ótima notícia e uma validação forte. Mas se as duas aparecerem no relatório sem rótulo de origem, a primeira reação de qualquer leitor de crédito é "seu número está errado".</p>
+        <p class="fix"><strong>Correção:</strong> nomear as medidas pela fonte — "Taxa de inadimplência (SCR.data)" e "Inadimplência BCB (SGS 21082)" — e usar a segunda como <em>linha de referência</em> na tendência, no lugar da meta que não existe. Vira prova de rigor em vez de suspeita de erro.</p>
+      </div>
+    </div>
+
+    <div class="prob">
+      <div class="sev s1">Crítico</div>
+      <div>
+        <h4>P3 · 26,3% das linhas não têm número de operações — e a medida não avisa</h4>
+        <p>Em dez/2025, <strong>81.700 das 310.419 linhas</strong> têm <code>numero_de_operacoes</code> nulo (sentinela <code>-1</code> na origem, convertido na Silver). <code>SUM</code> ignora nulo em silêncio, então "Número de Operações = 928,6 milhões" é um piso, não um total.</p>
+        <p class="fix"><strong>Correção:</strong> medida <code>Cobertura Nº de Operações</code> exibida junto do número, e nota no rodapé do visual. Nunca mostrar a contagem sozinha.</p>
+      </div>
+    </div>
+
+    <div class="prob">
+      <div class="sev s2">Alto</div>
+      <div>
+        <h4>P4 · Os dois fatos terminam em datas diferentes</h4>
+        <p><code>fato_credito</code> vai até <strong>dez/2025</strong>. As séries mensais do SGS em <code>fato_indicador_macro</code> vão até <strong>jun/2026</strong>, e a Selic até ago/2026. São <strong>6 meses de defasagem</strong>.</p>
+        <p>Colocar crédito e macro no mesmo eixo temporal sem tratar isso produz uma queda vertical falsa no fim da série de crédito — o erro visual mais comum em dashboards que cruzam fontes.</p>
+        <p class="fix"><strong>Correção:</strong> travar o eixo na última competência de crédito, ou exibir a área posterior como faixa sombreada rotulada "sem dado SCR". Medida <code>Defasagem SCR vs SGS (meses)</code> no arquivo DAX.</p>
+      </div>
+    </div>
+
+    <div class="prob">
+      <div class="sev s2">Alto</div>
+      <div>
+        <h4>P5 · Calendário diário para um fato mensal</h4>
+        <p><code>dim_calendario</code> tem <strong>4.382 dias</strong> (2015-01-01 a 2026-12-31). <code>fato_credito</code> tem <strong>132 datas</strong> — só o último dia de cada mês. Um slicer de data no nível dia oferece 4.250 dias que retornam vazio.</p>
+        <p class="fix"><strong>Correção:</strong> slicer sempre em <code>ano_mes</code> ou em hierarquia Ano › Trimestre › Mês; nunca no nível dia. Opcionalmente, coluna <code>eh_competencia_scr</code> na dimensão para filtrar o calendário.</p>
+      </div>
+    </div>
+
+    <div class="prob">
+      <div class="sev s2">Alto</div>
+      <div>
+        <h4>P6 · Granularidades misturadas dentro de <code>fato_indicador_macro</code></h4>
+        <p>A tabela une séries diárias (Selic, 2.511 e 3.656 linhas) e mensais (8 séries, ~138 linhas cada). O dicionário registra isso. Mas qualquer <code>SUM</code> ou <code>AVERAGE</code> sem filtro por <code>granularidade</code> mistura as duas escalas.</p>
+        <p class="fix"><strong>Correção:</strong> nenhuma medida sobre este fato sem filtro explícito de <code>nome_serie</code>. Medidas nomeadas por série, não genéricas.</p>
+      </div>
+    </div>
+
+    <div class="prob">
+      <div class="sev s3">Médio</div>
+      <div>
+        <h4>P7 · Divergência de contagem entre o local e o publicado</h4>
+        <p>O dicionário e o DuckDB local dizem <strong>34.461.901</strong> linhas em <code>fato_credito</code>. O ADR-009 registra <code>COUNTROWS(fato_credito)</code> = <strong>34.461.970</strong> no modelo publicado no Fabric. São <strong>69 linhas</strong> de diferença.</p>
+        <p>Provavelmente uma coleta posterior no Fabric. Mas é o tipo de divergência que, não explicada, derruba a confiança na reconciliação inteira.</p>
+        <p class="fix"><strong>Correção:</strong> reconciliar e registrar em ADR, ou fixar a contagem como medida exibida na página de notas.</p>
+      </div>
+    </div>
+
+    <div class="prob">
+      <div class="sev s3">Médio</div>
+      <div>
+        <h4>P8 · Ranking por tamanho absoluto sem normalização</h4>
+        <p>O top 5 de UF do mock é um ranking de PIB estadual disfarçado de análise de crédito. <code>silver.populacao_uf</code> existe e não está modelada.</p>
+        <p class="fix"><strong>Correção:</strong> promover população a atributo de <code>dim_uf</code> (ou dimensão própria com grão UF × ano) e trocar o ranking absoluto por <em>variação de taxa</em> e <em>crédito per capita</em>. Declarar a ausência de 2022 e 2023.</p>
+      </div>
+    </div>
+
+    <div class="prob">
+      <div class="sev s3">Médio</div>
+      <div>
+        <h4>P9 · A página não fecha visualmente</h4>
+        <p>No mock, os dois blocos da direita ("Carteira ativa por UF" e "Próximo passo") ocupam cerca de um terço da altura das suas caixas. Sobra um retângulo branco de aproximadamente 1.050 × 300 px vazio no canto inferior direito, e a caixa do gráfico principal se estende bem além do gráfico.</p>
+        <p>Whitespace é estrutura quando é decidido, e é buraco quando é sobra. Este é sobra.</p>
+        <p class="fix"><strong>Correção:</strong> altura do container definida pelo conteúdo, com faixas de altura fixa no grid — especificado em <a href="#s08">§08</a>.</p>
+      </div>
+    </div>
+
+    <div class="prob">
+      <div class="sev s3">Médio</div>
+      <div>
+        <h4>P10 · Unidades inconsistentes na mesma faixa</h4>
+        <p>A linha de KPIs mistura Tri, Bi, % e pp sem hierarquia de leitura. Além disso, "Carteira Ativa +11,3%" está em verde: o design assume que crescer é bom. Num dashboard de risco de crédito, crescimento acelerado de carteira com deterioração é justamente o sinal de alerta.</p>
+        <p class="fix"><strong>Correção:</strong> cor semântica só onde o julgamento é inequívoco. Carteira ativa em neutro; verde e vermelho reservados a qualidade da carteira.</p>
+      </div>
+    </div>
+
+    <div class="prob">
+      <div class="sev s3">Médio</div>
+      <div>
+        <h4>P11 · O KPI destacado é o menos acionável</h4>
+        <p>"Carteira Ativa" recebe fundo ocre e borda — o único KPI destacado. É o número menos acionável dos quatro: ninguém decide nada a partir do saldo total.</p>
+        <p class="fix"><strong>Correção:</strong> o destaque vai para o indicador que abre o diagnóstico. Proposta em <a href="#s10">§10</a>: destacar a inadimplência PF, que localiza o problema já na primeira faixa.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ==================== 05 ==================== -->
+<section id="s05">
+  <div class="sec-head"><span class="sec-num">05</span><h2>Da pesquisa ao projeto</h2></div>
+  <div class="prose"><p style="margin-bottom:var(--s4)">Ponte explícita entre o que a pesquisa de mercado encontrou, o princípio que isso gera, e o que muda no Lumen. Só achados que mudam algo aqui — os demais ficaram no relatório de mercado.</p></div>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th style="width:30%">Achado da pesquisa</th><th style="width:24%">Princípio</th><th>Aplicação no Lumen</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Modelo semântico virou o gargalo da era agentiva: agentes só funcionam sobre modelo bem estruturado e bem nomeado</td>
+          <td>A medida é o produto; o visual é a prova</td>
+          <td>Corrigir a semiaditividade antes de qualquer pixel. O agente da Sprint 7 herda o que estiver no modelo — inclusive o erro</td>
+        </tr>
+        <tr>
+          <td>IBCS ratificado como ISO 24896:2026 — sólido = realizado, contorno = plano, hachurado = forecast</td>
+          <td>Notação consistente vale mais que criatividade visual</td>
+          <td>Não há plano nem forecast no Lumen, então a notação não se aplica inteira. O que se aplica: <strong>barras de variância</strong> para Δ pp por modalidade e UF, e a série oficial do BCB desenhada como linha de referência</td>
+        </tr>
+        <tr>
+          <td>Fluent 2 virou o tema base do Power BI em 2026; canvas padrão 1920×1080; temas customizados agora <em>camadam</em> sobre o base</td>
+          <td>Não reconstrua o que o default já faz</td>
+          <td>Tema v2 curto, aplicado sobre Fluent 2, sobrescrevendo só paleta, tipografia e container. O mock foi desenhado em proporção 16:10 — migrar para 1920×1080</td>
+        </tr>
+        <tr>
+          <td>KPI sofisticado = valor + comparação + <em>gap</em>, com a cor aplicada ao julgamento e não ao valor; teto prático de 5 KPIs</td>
+          <td>Nenhum número aparece sozinho</td>
+          <td>4 KPIs. Cor no Δ, nunca no valor. Como não há meta, o "gap" é Δ a/a e, para inadimplência, a distância até a referência do BCB</td>
+        </tr>
+        <tr>
+          <td>Tabelas foram o tipo de visualização mais criado por profissionais em 2025 (dado da Datawrapper)</td>
+          <td>Tabela bem feita é data visualization</td>
+          <td>A página de diagnóstico tem uma matriz como visual principal — com sparkline e barra de variância na célula, não uma grade de gráficos</td>
+        </tr>
+        <tr>
+          <td>Eixo duplo é aceito em 2026, mas só com salvaguardas (alinhamento de eixos, legenda que liga série à escala)</td>
+          <td>Permitir com guarda-corpo, não proibir</td>
+          <td>Substituir barra+linha por <strong>dois painéis empilhados com eixo X compartilhado</strong>: cada série com sua escala rotulada. Se voltar a usar eixo duplo, rotular os dois eixos</td>
+        </tr>
+        <tr>
+          <td>Interação de 2026 tira cliques em vez de adicionar; nada essencial em tooltip</td>
+          <td>Simplificar a superfície, não a capacidade</td>
+          <td>1 slicer visível (competência). Field parameter para trocar a métrica do gráfico principal. Drill-through para a ficha de segmento. Tooltip só complementa</td>
+        </tr>
+        <tr>
+          <td>Rodapé de procedência (fonte, refresh, dono, definição) é o item de maior retorno por esforço</td>
+          <td>Confiança é elemento de design</td>
+          <td>Rodapé em todas as páginas + uma página inteira de notas metodológicas. O Lumen já tem o conteúdo pronto no dicionário de dados</td>
+        </tr>
+        <tr>
+          <td>Cartão não morreu; a sombra morreu. Uma forma de separação por bloco</td>
+          <td>Gaste borda/fundo/sombra por papel</td>
+          <td>Container = fundo branco + hairline. Zero sombra. Destaque só no bloco que abre o diagnóstico</td>
+        </tr>
+        <tr>
+          <td>Contraste ≥ 4.5:1; nunca só cor; marcadores obrigatórios em múltiplas séries; alt text ≤ 250 caracteres</td>
+          <td>Acessibilidade é requisito, não polimento</td>
+          <td>Ocre #A67821 sobre branco = 4,6:1 — passa por pouco. Slate #5B6470 = 5,9:1. Verificado em <a href="#s14">§14</a></td>
+        </tr>
+        <tr>
+          <td>Vitrine premiada em 2025 favoreceu contenção sobre espetáculo (Iron Viz: venceu a peça mais simples)</td>
+          <td>Saber o que não usar é sinal de senioridade</td>
+          <td>Um único visual não-nativo no projeto inteiro (o dumbbell em Deneb), e justificado. Nada de mapa coroplético decorativo</td>
+        </tr>
+        <tr>
+          <td>Mercado decide entre candidatos equivalentes pelo design, mas contrata por SQL + modelagem</td>
+          <td>O design é desempate</td>
+          <td>Não trocar rigor por estética. A página de notas metodológicas é o que diferencia — e é a mais fácil de construir</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================== 06 ==================== -->
+<section id="s06">
+  <div class="sec-head"><span class="sec-num">06</span><h2>Estratégia do dashboard</h2></div>
+  <div class="prose stack-lg">
+
+    <div class="spec">
+      <div class="spec-label">As nove respostas, antes de qualquer desenho</div>
+      <dl class="kv">
+        <dt>Quem usa</dt><dd>Avaliador técnico (hoje) e analista de risco de crédito (persona). O agente analítico consome as mesmas medidas.</dd>
+        <dt>Decisão</dt><dd>Onde concentrar atenção de risco: qual modalidade, qual perfil de cliente, qual UF revisar primeiro.</dd>
+        <dt>Pergunta central</dt><dd><strong>"O crédito está crescendo com qualidade — e, se não, onde exatamente está piorando?"</strong></dd>
+        <dt>KPI principal</dt><dd>Taxa de inadimplência (SCR.data) — 4,10% em dez/2025, +1,11 pp a/a, contra 4,20% da série oficial do BCB.</dd>
+        <dt>KPIs secundários</dt><dd>Carteira ativa (escala e crescimento), ativo problemático (risco antes do default), inadimplência PF (localização imediata do problema).</dd>
+        <dt>Aparece primeiro</dt><dd>A frase-conclusão calculada + os 4 KPIs com Δ. O leitor precisa saber em 5 segundos que a carteira cresce e a qualidade piora mais rápido.</dd>
+        <dt>Segundo nível</dt><dd>Onde: modalidade, UF, segmento × porte. Terceiro nível: por quê — contexto macro. Quarto: a linha do fato.</dd>
+        <dt>Removido</dt><dd>Ranking de UF por saldo absoluto; gauge; qualquer visual que não responda a uma das cinco perguntas de <a href="#s01">§01</a>.</dd>
+        <dt>Ação esperada</dt><dd>Sair com uma lista nomeada: "revisar política de crédito rural em RS, MT, GO e MA; revisar concessão a Financeira/até 1 SM". Não "saber como está o crédito".</dd>
+      </dl>
+    </div>
+
+    <div class="note"><span class="tag">A regra que governa tudo o resto</span>
+      Se um elemento não ajuda a responder uma das cinco perguntas de negócio, ele não entra. Aplicada literalmente, essa regra sozinha já elimina o ranking de UF por tamanho, o gauge, o segundo cartão de "número de operações" e qualquer mapa do Brasil colorido por saldo.
+    </div>
+
+  </div>
+</section>
+
+<!-- ==================== 07 ==================== -->
+<section id="s07">
+  <div class="sec-head"><span class="sec-num">07</span><h2>Arquitetura da informação</h2></div>
+  <div class="prose"><p style="margin-bottom:var(--s5)">Cinco páginas. A ordem não é "overview, detalhe, mais detalhe" — é a sequência de uma investigação: <em>o quê → onde → por quê → qual registro → posso confiar</em>.</p></div>
+
+  <div class="prose stack-lg">
+
+    <div class="stack">
+      <h3 style="margin-top:0">Página 1 · Visão Geral</h3>
+      <dl class="kv">
+        <dt>Objetivo</dt><dd>Responder "o crédito está crescendo com qualidade?" em menos de 10 segundos</dd>
+        <dt>Público</dt><dd>Todos. É a capa.</dd>
+        <dt>Responde</dt><dd>Pergunta 1 e abre a 3</dd>
+        <dt>KPIs</dt><dd>Taxa de inadimplência · Carteira ativa · Ativo problemático · Inadimplência PF (destaque)</dd>
+        <dt>Visuais</dt><dd>Painel duplo carteira/taxa (2015–2025, com linha de referência do BCB) · Dumbbell de Δpp por modalidade · Caixa de insight calculada</dd>
+        <dt>Filtros</dt><dd>Competência (nível mês). Nada mais.</dd>
+        <dt>Interações</dt><dd>Field parameter na métrica do painel inferior; botão para a página 2</dd>
+        <dt>Narrativa</dt><dd>Contexto → resultado → tendência → onde olhar</dd>
+      </dl>
+    </div>
+
+    <div class="stack">
+      <h3>Página 2 · Onde</h3>
+      <dl class="kv">
+        <dt>Objetivo</dt><dd>Localizar a deterioração: qual modalidade, qual UF, qual perfil</dd>
+        <dt>Público</dt><dd>Analista de risco</dd>
+        <dt>Responde</dt><dd>Pergunta 2 e completa a 3</dd>
+        <dt>KPIs</dt><dd>Reduzidos a 2: Δpp da taxa e Δ absoluto de carteira vencida, ambos no corte selecionado</dd>
+        <dt>Visuais</dt><dd><strong>Matriz de diagnóstico</strong> (modalidade × métrica, com barra de variância e sparkline na célula) · Scatter carteira × taxa, bolha = Δpp · Dumbbell por UF</dd>
+        <dt>Filtros</dt><dd>Competência · Cliente (PF/PJ) como field parameter, não slicer</dd>
+        <dt>Interações</dt><dd>Cross-filter entre os três visuais; drill-through para a página 4</dd>
+        <dt>Narrativa</dt><dd>Diagnóstico: da distribuição à concentração</dd>
+      </dl>
+    </div>
+
+    <div class="stack">
+      <h3>Página 3 · Contexto macro</h3>
+      <dl class="kv">
+        <dt>Objetivo</dt><dd>Situar o movimento do crédito no ciclo econômico</dd>
+        <dt>Público</dt><dd>Analista e avaliador</dd>
+        <dt>Responde</dt><dd>Pergunta 4</dd>
+        <dt>KPIs</dt><dd>Selic meta · Spread médio · Endividamento das famílias · Crédito/PIB — todos do SGS, todos rotulados como tal</dd>
+        <dt>Visuais</dt><dd>Small multiples das 6 séries mensais em escala própria, eixo X compartilhado e travado na última competência de crédito · Concessões PF vs PJ</dd>
+        <dt>Filtros</dt><dd>Nenhum. É contexto nacional; não responde a corte de UF ou modalidade</dd>
+        <dt>Interações</dt><dd>Faixa sombreada marcando os 6 meses em que há SGS e não há SCR</dd>
+        <dt>Narrativa</dt><dd>Drivers — sem afirmar causalidade que o dado não sustenta</dd>
+      </dl>
+      <div class="note warnbox"><span class="tag">Cuidado explícito nesta página</span>Correlação entre Selic e inadimplência com defasagem é tentadora e não foi testada neste projeto. A página apresenta as séries lado a lado e deixa a leitura para quem sabe — <em>não</em> escreve "a alta da Selic causou a inadimplência". Essa contenção é um sinal de senioridade, não uma omissão.</div>
+    </div>
+
+    <div class="stack">
+      <h3>Página 4 · Ficha de segmento (drill-through)</h3>
+      <dl class="kv">
+        <dt>Objetivo</dt><dd>Investigar um corte específico: modalidade × UF × porte × cliente</dd>
+        <dt>Público</dt><dd>Analista</dd>
+        <dt>Responde</dt><dd>"Quais registros explicam isso?"</dd>
+        <dt>Visuais</dt><dd>Cabeçalho com o corte ativo · Série mensal de 132 pontos do corte · Tabela: competência, carteira, vencida, inadimplência, AP, nº de operações, cobertura</dd>
+        <dt>Filtros</dt><dd>Herdados do drill-through; botão de retorno obrigatório</dd>
+        <dt>Narrativa</dt><dd>Detalhe. Sem interpretação — aqui o dado fala sozinho</dd>
+      </dl>
+    </div>
+
+    <div class="stack">
+      <h3>Página 5 · Notas metodológicas</h3>
+      <dl class="kv">
+        <dt>Objetivo</dt><dd>Responder "posso confiar nesses números?"</dd>
+        <dt>Público</dt><dd>Avaliador técnico — e você, daqui a seis meses</dd>
+        <dt>Responde</dt><dd>Pergunta 5</dd>
+        <dt>Conteúdo</dt><dd>Tabela de reconciliação SCR × SGS (as 4 competências já validadas, +3,26% a +4,51%) · Definição de cada medida certificada · Tratamento do sentinela <code>-1</code> e cobertura por competência · Inconsistência 2015–2016 (5.869 linhas, 99,98% em 2015–2016) · Defasagem SCR × SGS · Linhagem: fonte → Bronze → Silver → Gold → modelo</dd>
+        <dt>Visuais</dt><dd>Duas tabelas e texto. Deliberadamente sem gráfico</dd>
+        <dt>Narrativa</dt><dd>Prova</dd>
+      </dl>
+      <div class="note"><span class="tag">Por que esta página é a mais importante do projeto</span>Ela é a única que um avaliador não espera encontrar. Todo mundo tem uma visão geral bonita; quase ninguém publica a divergência dos próprios números com a fonte oficial e explica por que ela é aceitável. Nesta página o Lumen deixa de parecer um exercício e passa a parecer trabalho.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ==================== 08 ==================== -->
+<section id="s08">
+  <div class="sec-head"><span class="sec-num">08</span><h2>Wireframes</h2></div>
+  <div class="prose stack">
+    <div class="spec">
+      <div class="spec-label">Sistema de grid — justificado, não copiado</div>
+      <dl class="kv">
+        <dt>Canvas</dt><dd><strong>1920 × 1080</strong> — padrão do Power BI desde 2026. O mock atual está em proporção 16:10; migrar elimina retrabalho futuro</dd>
+        <dt>Margem</dt><dd><strong>32 px</strong> em todos os lados → área útil 1856 × 1016</dd>
+        <dt>Colunas</dt><dd><strong>12</strong>, gutter <strong>16 px</strong> → coluna = 139,3 px. Doze divide por 2, 3, 4 e 6 — cobre linhas de 4 KPIs, 3 blocos e 2 painéis sem sobra</dd>
+        <dt>Faixas</dt><dd>Cabeçalho 72 · KPIs 108 · principal 400 · suporte 300 · rodapé 28. Gaps de 24 px. Total: 72+24+108+24+400+24+300+24+28 = <strong>1004</strong>, sobrando 12 px de folga vertical</dd>
+        <dt>Espaçamento</dt><dd>Escala de 4: <strong>4 · 8 · 12 · 16 · 24 · 32</strong>. Nada fora disso</dd>
+        <dt>Altura de container</dt><dd>Definida pela faixa, não pelo conteúdo. Corrige o P9: nenhum bloco se estende além da sua faixa</dd>
+      </dl>
+    </div>
+
+    <h3>Página 1 · Visão Geral</h3>
+    <div class="spec">
+      <div class="wire" style="grid-template-columns:repeat(12,1fr)">
+        <div class="em" style="grid-column:span 8;min-height:56px">Título dinâmico (medida) · Segoe UI Semibold 22<br>Subtítulo: fonte · competência · nº de linhas</div>
+        <div style="grid-column:span 2">Slicer competência<br>(nível mês)</div>
+        <div style="grid-column:span 2">Navegação<br>5 páginas</div>
+
+        <div style="grid-column:span 3;min-height:92px">Taxa de inadimplência<br>4,10% · +1,11 pp a/a<br>ref. BCB 4,20%</div>
+        <div style="grid-column:span 3;min-height:92px">Carteira ativa<br>R$ 7,44 Tri · +11,3%<br>(neutro — não é bom nem ruim)</div>
+        <div style="grid-column:span 3;min-height:92px">Ativo problemático<br>R$ 570,3 Bi · +31,0%<br>7,66% da carteira</div>
+        <div class="hl" style="grid-column:span 3;min-height:92px">Inadimplência PF<br>5,15% · +1,49 pp<br>PJ: 2,49% · +0,52 pp</div>
+
+        <div style="grid-column:span 8;min-height:170px">PAINEL SUPERIOR — carteira ativa, R$ Tri, eixo rotulado<br>─────────────────────<br>PAINEL INFERIOR — taxa de inadimplência %, eixo rotulado<br>linha tracejada = referência BCB (SGS 21082)<br><em>eixo X compartilhado · 2015–2025 · sem eixo duplo</em></div>
+        <div style="grid-column:span 4;min-height:170px">DUMBBELL — Δpp da taxa por modalidade<br>dez/2024 ● ── ● dez/2025<br>ordenado por Δ decrescente<br><em>Deneb</em></div>
+
+        <div class="em" style="grid-column:span 8;min-height:80px">CAIXA DE INSIGHT (medida DAX, não texto fixo)<br>"A deterioração está concentrada em crédito rural (+3,15 pp) e em pessoa física (+1,49 pp vs +0,52 pp em PJ)."</div>
+        <div style="grid-column:span 4;min-height:80px">Botão → página 2<br>"Ver onde está concentrado"</div>
+
+        <div class="gh" style="grid-column:span 12;min-height:24px">Rodapé: SCR.data (BCB) · Gold via dbt · Direct Lake · último refresh · definição da taxa</div>
+      </div>
+    </div>
+
+    <h3>Página 2 · Onde</h3>
+    <div class="spec">
+      <div class="wire" style="grid-template-columns:repeat(12,1fr)">
+        <div class="em" style="grid-column:span 7;min-height:56px">"Onde a alta de +63,0% na carteira vencida está concentrada"</div>
+        <div style="grid-column:span 2">Competência</div>
+        <div style="grid-column:span 2">Field param<br>PF / PJ / Todos</div>
+        <div style="grid-column:span 1">← P1</div>
+
+        <div style="grid-column:span 3;min-height:80px">Δ taxa no corte<br>+1,11 pp</div>
+        <div style="grid-column:span 3;min-height:80px">Δ carteira vencida<br>+R$ 89,9 Bi</div>
+        <div class="gh" style="grid-column:span 6;min-height:80px">Espaço reservado — legenda da matriz e nota de cobertura do dado</div>
+
+        <div style="grid-column:span 7;min-height:210px">MATRIZ DE DIAGNÓSTICO — modalidade nas linhas<br>colunas: carteira · taxa 24 · taxa 25 · Δpp (barra de variância) · sparkline 24 meses<br><em>visual principal da página; tabela, não grade de gráficos</em></div>
+        <div style="grid-column:span 5;min-height:210px">SCATTER — carteira (X, log) × taxa (Y)<br>bolha = Δpp · cor = PF/PJ<br>linha de referência: taxa nacional</div>
+
+        <div style="grid-column:span 12;min-height:150px">DUMBBELL POR UF — 27 estados, Δpp ordenado · pequenos múltiplos por região opcional</div>
+        <div class="gh" style="grid-column:span 12;min-height:24px">Rodapé + aviso de cobertura</div>
+      </div>
+    </div>
+
+    <h3>Páginas 3, 4 e 5 · esquema resumido</h3>
+    <div class="grid g3">
+      <div class="spec" style="margin:0">
+        <div class="spec-label">P3 · Contexto macro</div>
+        <div class="wire" style="grid-template-columns:repeat(2,1fr)">
+          <div class="em" style="grid-column:span 2">Título + aviso de defasagem</div>
+          <div>Selic meta</div><div>Spread médio</div>
+          <div>Endividamento famílias</div><div>Crédito/PIB</div>
+          <div>Concessões PF</div><div>Concessões PJ</div>
+          <div class="gh" style="grid-column:span 2">Faixa sombreada jan–jun/2026: SGS sem SCR</div>
+        </div>
+      </div>
+      <div class="spec" style="margin:0">
+        <div class="spec-label">P4 · Ficha (drill-through)</div>
+        <div class="wire" style="grid-template-columns:1fr">
+          <div class="em">Corte ativo + botão voltar</div>
+          <div style="min-height:70px">Série mensal do corte<br>132 competências</div>
+          <div style="min-height:90px">Tabela detalhada<br>+ coluna de cobertura</div>
+        </div>
+      </div>
+      <div class="spec" style="margin:0">
+        <div class="spec-label">P5 · Notas metodológicas</div>
+        <div class="wire" style="grid-template-columns:1fr">
+          <div class="em">Reconciliação SCR × SGS</div>
+          <div style="min-height:60px">Definição das medidas</div>
+          <div style="min-height:60px">Qualidade conhecida<br>-1 · 2015-16 · defasagem</div>
+          <div>Linhagem Bronze→modelo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 09 ==================== -->
+<section id="s09">
+  <div class="sec-head"><span class="sec-num">09</span><h2>Design system do Lumen</h2></div>
+  <div class="prose"><p style="margin-bottom:var(--s4)">Construído sobre a paleta que já existe em <code>lumen_theme.json</code> — não substituída. O que muda é a <em>função</em> de cada cor, não a cor.</p></div>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Token</th><th class="num">Hex</th><th>Função — o que autoriza o uso</th></tr></thead>
+      <tbody>
+        <tr><td><strong>background</strong></td><td class="num">#F4F6F7</td><td>Fundo da página. Cinza levemente frio, não branco: dá ao container branco algo para se destacar contra</td></tr>
+        <tr><td><strong>surface</strong></td><td class="num">#FFFFFF</td><td>Container de visual. Única superfície elevada do sistema</td></tr>
+        <tr><td><strong>border</strong></td><td class="num">#E3E7EA</td><td>Hairline de 1px, raio 4. A <em>única</em> forma de separação — sem sombra</td></tr>
+        <tr><td><strong>neutral surface</strong></td><td class="num">#DDE1E4</td><td>Trilho de barra, cabeçalho de matriz, zebra desligada</td></tr>
+        <tr><td><strong>text</strong></td><td class="num">#14181C</td><td>Valor, título, rótulo de dado. Contraste 15,8:1 sobre branco</td></tr>
+        <tr><td><strong>text secondary</strong></td><td class="num">#5B6470</td><td>Rótulo de categoria, subtítulo, eixo. 5,9:1 — passa em AA</td></tr>
+        <tr><td><strong>text muted</strong></td><td class="num">#8A9099</td><td>Rodapé, microcopy. 3,1:1 — <strong>só acima de 18,66 px ou em negrito ≥14 px</strong></td></tr>
+        <tr><td><strong>primary (ocre)</strong></td><td class="num">#A67821</td><td>Série em foco, botão ativo, marca. 4,6:1 sobre branco — passa em AA para texto normal, por margem estreita</td></tr>
+        <tr><td><strong>primary tint</strong></td><td class="num">#F5EEDF</td><td>Fundo do KPI em destaque e da caixa de insight. Nunca em série de dado</td></tr>
+        <tr><td><strong>data neutral</strong></td><td class="num">#5B6470</td><td>Toda série que <em>não</em> é a série em foco. É o token mais usado do sistema</td></tr>
+        <tr><td><strong>success</strong></td><td class="num">#1E6F58</td><td>Melhora da qualidade da carteira. Nunca crescimento de saldo</td></tr>
+        <tr><td><strong>danger</strong></td><td class="num">#A13A30</td><td>Piora da qualidade. 6,4:1 — legível como texto</td></tr>
+        <tr><td><strong>warning</strong></td><td class="num">#8A6212</td><td>Aviso de qualidade do dado (cobertura, defasagem, 2015–2016)</td></tr>
+        <tr><td><strong>reference</strong></td><td class="num">#3E4C59</td><td>Linha tracejada da série oficial do BCB. Cor exclusiva — nada mais usa</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose stack">
+    <div class="note"><span class="tag">A decisão de cor mais importante</span>
+      <strong>Verde e vermelho ficam reservados à qualidade da carteira.</strong> Crescimento de carteira ativa é neutro — em risco de crédito, carteira crescendo rápido com qualidade piorando é o alerta, não a boa notícia. Pintar "+11,3%" de verde, como no mock atual, é o design contradizendo a tese da própria página.
+    </div>
+  </div>
+
+  <h3>Tipografia</h3>
+  <div class="spec">
+    <div class="spec-label">Escala — 6 tamanhos, dois papéis</div>
+    <div class="tw" style="margin:0;border:0">
+      <table style="min-width:30rem">
+        <thead><tr><th>Papel</th><th>Família</th><th class="num">Tam.</th><th class="num">Peso</th><th>Onde</th></tr></thead>
+        <tbody>
+          <tr><td>Título de página</td><td>Segoe UI Semibold</td><td class="num">22</td><td class="num">600</td><td>A frase-conclusão calculada</td></tr>
+          <tr><td>KPI</td><td><strong>Georgia</strong></td><td class="num">28</td><td class="num">400</td><td>Só o número grande do cartão</td></tr>
+          <tr><td>Título de visual</td><td>Segoe UI Semibold</td><td class="num">16</td><td class="num">600</td><td>Todos, sem exceção — mesmo corpo</td></tr>
+          <tr><td>Subtítulo / eixo</td><td>Segoe UI</td><td class="num">11</td><td class="num">400</td><td>Unidade, período, rótulo de eixo</td></tr>
+          <tr><td>Valor de tabela</td><td>Segoe UI</td><td class="num">11</td><td class="num">400</td><td>Matriz e tabela — <strong>nunca Georgia</strong></td></tr>
+          <tr><td>Microcopy</td><td>Segoe UI</td><td class="num">10</td><td class="num">400</td><td>Rodapé de procedência, avisos</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:.86rem;color:var(--ink-2);margin-top:var(--s4)">Georgia usa algarismos de estilo antigo: o 4 e o 7 descem abaixo da linha de base. Num KPI isolado isso vira assinatura editorial e é o que dá ao Lumen um caráter que nenhum tema padrão tem. Em coluna de tabela, os mesmos algarismos destroem o alinhamento. A regra é curta: <strong>Georgia só onde há um número por bloco.</strong></p>
+  </div>
+
+  <h3>Componentes</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Componente</th><th>Especificação</th><th>Estados</th></tr></thead>
+      <tbody>
+        <tr><td>KPI</td><td>316 × 92 px · padding 12/14 · nome 11 · valor Georgia 28 · contexto 11 · rodapé mono 10 · trilho 4 px</td><td>Padrão / em destaque (borda ocre + faixa interna 3 px) / sem dado</td></tr>
+        <tr><td>Container de visual</td><td>Fundo #FFFFFF · borda #E3E7EA raio 4 · padding 12 · título 16/600 alinhado à esquerda · subtítulo 11</td><td>Padrão / com aviso de qualidade (faixa 2 px em warning no topo)</td></tr>
+        <tr><td>Slicer</td><td>Altura 32 · sem fundo · sem borda · cabeçalho 11/600 em text secondary</td><td>Padrão / com seleção ativa (texto em ocre)</td></tr>
+        <tr><td>Navegação</td><td>Faixa 28 px · item 11/600 · ativo com barra inferior de 2 px em ocre</td><td>Padrão / ativo / hover</td></tr>
+        <tr><td>Caixa de insight</td><td>Fundo primary tint · borda esquerda 4 px ocre · texto 13 · máx. 2 linhas · <strong>gerada por medida</strong></td><td>Com insight / sem insight (colapsa)</td></tr>
+        <tr><td>Alerta de qualidade</td><td>Borda esquerda 4 px warning · fundo transparente · ícone + texto 11</td><td>Cobertura / defasagem / 2015–2016</td></tr>
+        <tr><td>Matriz</td><td>Linha 28 px · cabeçalho 11/600 · valores Segoe UI 11 tabular · grade só horizontal #EDEFF1 · barra de variância na coluna Δpp</td><td>Padrão / linha em foco</td></tr>
+        <tr><td>Tooltip</td><td>Página de tooltip 320 × 200 px · fundo surface · borda 1 px · nunca informação essencial</td><td>Único</td></tr>
+        <tr><td>Rodapé de procedência</td><td>28 px · mono 10 · text muted · fonte, refresh, definição</td><td>Único — presente em todas as páginas</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ==================== 10 ==================== -->
+<section id="s10">
+  <div class="sec-head"><span class="sec-num">10</span><h2>Design dos KPIs</h2></div>
+  <div class="prose stack">
+    <p>Quatro cartões. Cada um com métrica, valor, contexto e comparação — e um deles com a comparação externa que substitui a meta ausente.</p>
+  </div>
+
+  <div class="spec">
+    <div class="spec-label">Proposta — dados reais de dez/2025, consultados no lumen.duckdb</div>
+    <div class="kpirow">
+      <div class="kpi">
+        <div class="kn">Taxa de inadimplência · SCR.data</div>
+        <div class="kv2">4,10%</div>
+        <div class="kc"><span style="color:var(--bad);font-weight:600">▲ +1,11 pp</span> em 12 meses</div>
+        <div class="track"><i style="width:82%"></i><b style="left:84%"></b></div>
+        <div class="kf">ref. BCB (SGS 21082): 4,20%</div>
+      </div>
+      <div class="kpi">
+        <div class="kn">Carteira ativa</div>
+        <div class="kv2">R$ 7,44 Tri</div>
+        <div class="kc">+11,3% em 12 meses</div>
+        <div class="kf">saldo em dez/2025 · 310.419 linhas</div>
+      </div>
+      <div class="kpi">
+        <div class="kn">Ativo problemático</div>
+        <div class="kv2">R$ 570,3 Bi</div>
+        <div class="kc"><span style="color:var(--bad);font-weight:600">▲ +31,0%</span> · 7,66% da carteira</div>
+        <div class="kf">cresce 2,7× mais rápido que a carteira</div>
+      </div>
+      <div class="kpi focus">
+        <div class="kn">Inadimplência · pessoa física</div>
+        <div class="kv2">5,15%</div>
+        <div class="kc"><span style="color:var(--bad);font-weight:600">▲ +1,49 pp</span> · PJ: 2,49% (+0,52)</div>
+        <div class="kf">PF = 61% da carteira e 2× a taxa de PJ</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="prose stack">
+    <h4>As decisões, uma a uma</h4>
+    <ul>
+      <li><strong>Quatro, não oito.</strong> Faixa executiva de 3 a 5. O mock já acertou nisso.</li>
+      <li><strong>O destaque mudou de lugar.</strong> Sai da carteira ativa (o número menos acionável) e vai para a inadimplência PF — que já localiza o problema na primeira faixa e dá o gancho para a página 2. O destaque é uma borda ocre e uma faixa interna de 3 px, não um fundo preenchido: menos peso, mesma função.</li>
+      <li><strong>Cor só no julgamento.</strong> O Δ da carteira ativa fica em texto normal. Crescimento de saldo não é bom nem ruim num painel de risco.</li>
+      <li><strong>A meta que não existe foi substituída.</strong> O trilho no primeiro cartão marca a taxa do SCR contra a referência do BCB — a única comparação externa legítima disponível. Nos outros três não há trilho, porque não há referência: <em>dado necessário, mas não disponível no projeto</em>.</li>
+      <li><strong>Rodapé por cartão.</strong> Cada um carrega a informação que impede uma leitura errada: a fonte da referência, o número de linhas da competência, a velocidade relativa, o peso do segmento.</li>
+      <li><strong>Sem sparkline nos quatro.</strong> A tendência completa está logo abaixo, no painel principal, em escala legível. Sparkline em todos os cartões duplicaria a informação e roubaria altura útil. Sparkline entra na <em>matriz</em> da página 2, onde não há espaço para gráfico separado — é lá que ela paga o custo.</li>
+      <li><strong>Nenhum cartão de "número de operações".</strong> Com 26,3% de cobertura faltando, esse número não sustenta um KPI de capa. Ele vive na página 4, ao lado da sua taxa de cobertura.</li>
+    </ul>
+    <div class="note"><span class="tag">Escada de maturidade — onde estes cartões estão</span>Nível 1 número isolado · 2 com variação · 3 com meta · 4 com tendência · 5 com contexto · 6 com insight. Os quatro cartões acima estão no <strong>nível 5</strong>, e o nível 3 é substituído pela referência externa. O nível 6 fica na caixa de insight calculada logo abaixo — que é o lugar certo, porque o insight é sobre a relação entre os cartões, não sobre um deles.</div>
+  </div>
+</section>
+
+<!-- ==================== 11 ==================== -->
+<section id="s11">
+  <div class="sec-head"><span class="sec-num">11</span><h2>Escolha dos gráficos</h2></div>
+  <div class="prose"><p style="margin-bottom:var(--s4)">Pergunta → dado → visual. Cada linha registra também o que foi descartado, porque a decisão de não usar é parte da especificação.</p></div>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th style="width:22%">Pergunta</th><th>Métrica × dimensão</th><th>Visual escolhido</th><th>Por quê · o que foi descartado</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>A carteira cresce com qualidade?</strong></td>
+          <td>Carteira ativa e taxa de inadimplência × competência (132 pontos)</td>
+          <td><strong>Dois painéis empilhados</strong>, eixo X compartilhado, cada um com sua escala rotulada</td>
+          <td>Descartado <em>eixo duplo barra+linha</em>: é o que existe hoje, e sem eixos rotulados o leitor só vê forma. Descartado <em>índice base 100</em>: resolveria a escala, mas apaga a magnitude (R$ 7,44 Tri é parte da mensagem). O painel duplo mantém as duas escalas legíveis e o alinhamento temporal.</td>
+        </tr>
+        <tr>
+          <td><strong>Onde a taxa piorou mais?</strong></td>
+          <td>Δpp da taxa × modalidade (10 categorias)</td>
+          <td><strong>Dumbbell</strong> — ponto dez/2024 ligado ao ponto dez/2025</td>
+          <td>Descartado <em>barras agrupadas</em>: duas barras por categoria dobram a tinta e escondem a distância, que é justamente a informação. Descartado <em>slope chart</em>: elegante, mas com 10 modalidades de magnitudes muito diferentes as linhas se cruzam. O dumbbell codifica a variação como comprimento — a codificação mais precisa disponível.</td>
+        </tr>
+        <tr>
+          <td><strong>A deterioração é generalizada ou concentrada?</strong></td>
+          <td>Carteira (X) × taxa (Y) × Δpp (tamanho) × cliente (cor) — modalidade ou UF</td>
+          <td><strong>Scatter com bolha</strong>, eixo X em log, linha de referência na taxa nacional</td>
+          <td>Descartado <em>treemap</em>: mostra tamanho, não relação. Descartado <em>mapa coroplético</em>: para UF seria natural, mas mapa do Brasil colorido por taxa é dominado pela área territorial — AM e PA gritam, RS some. O scatter mantém tamanho e risco no mesmo plano.</td>
+        </tr>
+        <tr>
+          <td><strong>Qual modalidade revisar primeiro?</strong></td>
+          <td>10 modalidades × 5 métricas × 24 competências</td>
+          <td><strong>Matriz</strong> com barra de variância na coluna Δpp e sparkline de 24 meses</td>
+          <td>Descartado <em>grade de gráficos pequenos</em>: 10 gráficos consomem a página e não permitem ordenar. Tabela foi o tipo mais criado por profissionais em 2025 exatamente por isso — quando a pergunta é "qual, dentre estes, e em que ordem", a tabela vence.</td>
+        </tr>
+        <tr>
+          <td><strong>PF e PJ se comportam igual?</strong></td>
+          <td>Taxa × cliente × competência (2 séries)</td>
+          <td><strong>Duas linhas</strong> com rótulo direto na ponta, sem legenda</td>
+          <td>Descartado <em>colunas empilhadas 100%</em>: composição não é a pergunta. Rótulo direto elimina a legenda e o movimento de ida e volta do olho.</td>
+        </tr>
+        <tr>
+          <td><strong>O que o macro diz?</strong></td>
+          <td>6 séries mensais do SGS × competência</td>
+          <td><strong>Small multiples</strong>, cada série em sua escala, eixo X compartilhado e travado</td>
+          <td>Descartado <em>tudo num eixo só</em>: Selic (% a.a.), spread (pp), endividamento (% da renda) e crédito/PIB (%) não compartilham escala. Descartado <em>normalizar em z-score</em>: comparável, mas ilegível para quem quer saber o valor da Selic.</td>
+        </tr>
+        <tr>
+          <td><strong>Meus números batem com o BCB?</strong></td>
+          <td>Saldo SCR vs SGS 20539 × 4 competências</td>
+          <td><strong>Tabela</strong> com as duas fontes e a diferença percentual</td>
+          <td>Descartado <em>gráfico de barras comparativo</em>: com diferença entre +3,26% e +4,51% as barras ficam visualmente idênticas e a mensagem — "convergem, com divergência metodológica sistemática" — se perde. O número escrito comunica melhor que a imagem.</td>
+        </tr>
+        <tr>
+          <td><strong>Como este corte evoluiu?</strong></td>
+          <td>5 métricas × 132 competências, um corte</td>
+          <td><strong>Linha</strong> + <strong>tabela</strong> com coluna de cobertura</td>
+          <td>Descartado <em>área empilhada</em>: as partes não fecham com o total em 2015–2016 (5.869 linhas). Empilhar uma decomposição que não fecha é mentir com gráfico.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <div class="chips" style="margin-top:var(--s4)">
+      <span class="chip on">Painel duplo</span><span class="chip on">Dumbbell</span><span class="chip on">Scatter</span><span class="chip on">Matriz + sparkline</span><span class="chip on">Small multiples</span><span class="chip on">Linha com rótulo direto</span><span class="chip on">Tabela</span>
+    </div>
+    <div class="chips">
+      <span class="chip off">Eixo duplo sem eixos</span><span class="chip off">Mapa coroplético</span><span class="chip off">Treemap</span><span class="chip off">Gauge</span><span class="chip off">Pizza / donut</span><span class="chip off">Área empilhada</span><span class="chip off">Barras agrupadas para variação</span>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 12 ==================== -->
+<section id="s12">
+  <div class="sec-head"><span class="sec-num">12</span><h2>Hierarquia e storytelling</h2></div>
+  <div class="prose stack-lg">
+
+    <div class="stack">
+      <h3 style="margin-top:0">Os quatro níveis e o que cria cada um</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Nível</th><th>Conteúdo</th><th>Tamanho</th><th>Posição</th><th>Cor</th><th>Espaço</th></tr></thead>
+          <tbody>
+            <tr><td><strong>1 · Saber já</strong></td><td>Frase-conclusão + 4 KPIs</td><td>22 e 28 px</td><td>Topo, faixas 1–2</td><td>Ocre só no cartão em destaque</td><td>24 px isolando a faixa</td></tr>
+            <tr><td><strong>2 · Explicar</strong></td><td>Painel duplo + dumbbell</td><td>16 px de título</td><td>Faixa 3, 400 px de altura</td><td>Ocre = série em foco; slate = resto</td><td>16 px entre visuais</td></tr>
+            <tr><td><strong>3 · Investigar</strong></td><td>Insight + botão para a página 2</td><td>13 px</td><td>Faixa 4</td><td>Tint ocre de fundo</td><td>24 px acima</td></tr>
+            <tr><td><strong>4 · Detalhar</strong></td><td>Matriz, scatter, ficha</td><td>11 px</td><td>Páginas 2 e 4</td><td>Neutro, com variância colorida</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><span class="tag">Por que não depende de cor</span>Retire toda a cor da página 1 e a hierarquia continua de pé: o título é 2× o corpo, o KPI é 2,5×, os quatro cartões estão na faixa mais alta, e o gráfico principal ocupa 8 das 12 colunas contra 4 do secundário. Cor é a quarta camada de hierarquia, nunca a primeira. Este é também o teste de daltonismo mais rápido que existe.</div>
+    </div>
+
+    <div class="stack">
+      <h3>A narrativa, adaptada ao Lumen</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Bloco</th><th>Onde está</th><th>Por que nesta posição</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Contexto</strong></td><td>Subtítulo: fonte, competência, nº de linhas</td><td>Antes do número, porque num projeto de dados públicos a primeira pergunta do leitor é "de onde vem isso?"</td></tr>
+            <tr><td><strong>Resultado</strong></td><td>Frase-conclusão + KPIs</td><td>A conclusão vem antes da evidência. É o padrão dos melhores exemplos e o oposto do relatório acadêmico</td></tr>
+            <tr><td><strong>Tendência</strong></td><td>Painel duplo, 2015–2025</td><td>Onze anos mostram que 2025 rompe o padrão — sem a série longa, +1,11 pp é só um número</td></tr>
+            <tr><td><strong>Comparação</strong></td><td>Linha de referência do BCB no painel inferior</td><td>Dentro do gráfico, não em cartão separado: comparação só significa algo junto da série</td></tr>
+            <tr><td><strong>Diagnóstico</strong></td><td>Dumbbell (P1) → matriz e scatter (P2)</td><td>Começa na mesma tela, aprofunda na seguinte. O leitor executivo para no dumbbell; o analista continua</td></tr>
+            <tr><td><strong>Insight</strong></td><td>Caixa calculada, faixa 4 da P1</td><td>Depois da evidência, nunca antes. E gerado por medida — quando a Gold mudar, o insight muda</td></tr>
+            <tr><td><strong>Ação</strong></td><td>Botão nomeado: "Ver onde está concentrado"</td><td>A ação de um dashboard analítico é uma investigação, não um botão de aprovar. O nome do botão é a próxima pergunta</td></tr>
+            <tr><td><strong>Prova</strong></td><td>Página 5</td><td>Bloco extra, específico deste projeto: a reconciliação com a fonte oficial é o ativo que quase nenhum portfólio tem</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 13 ==================== -->
+<section id="s13">
+  <div class="sec-head"><span class="sec-num">13</span><h2>Interação e tooltips</h2></div>
+  <div class="prose stack">
+    <div class="tw">
+      <table>
+        <thead><tr><th>Interação</th><th>Entra?</th><th>Função — ou motivo da exclusão</th></tr></thead>
+        <tbody>
+          <tr><td>Slicer de competência</td><td><strong>Sim</strong></td><td>Único slicer visível. Nível mês, nunca dia (P5)</td></tr>
+          <tr><td>Field parameter · métrica</td><td><strong>Sim</strong></td><td>Troca a métrica do painel inferior entre taxa de inadimplência, taxa de AP e taxa de vencida. Elimina 3 páginas</td></tr>
+          <tr><td>Field parameter · cliente</td><td><strong>Sim</strong></td><td>PF / PJ / Todos na página 2. Como parâmetro e não slicer, porque muda a pergunta, não filtra o dado</td></tr>
+          <tr><td>Título dinâmico</td><td><strong>Sim</strong></td><td>Medida DAX. Substitui o headline fixo e mantém o título correto quando a Gold é recarregada</td></tr>
+          <tr><td>Cross-filter</td><td><strong>Sim</strong></td><td>Página 2, entre matriz, scatter e dumbbell. Ligado, com destaque em vez de filtro, para não sumir com o contexto</td></tr>
+          <tr><td>Drill-through</td><td><strong>Sim</strong></td><td>De qualquer visual da página 2 para a ficha de segmento. Botão de retorno obrigatório</td></tr>
+          <tr><td>Página de tooltip</td><td><strong>Sim</strong></td><td>Uma só, no dumbbell e na matriz. Detalhe abaixo</td></tr>
+          <tr><td>Anotação de contexto</td><td><strong>Sim</strong></td><td>Faixa sombreada para 2015–2016 (inconsistência) e para jan–jun/2026 (SGS sem SCR)</td></tr>
+          <tr><td>Bookmarks</td><td>Não</td><td>Field parameters resolvem os mesmos casos sem estado escondido. Bookmark só se houver necessidade real de painel recolhível</td></tr>
+          <tr><td>Drill-down hierárquico</td><td>Não</td><td>Modalidade → submodalidade parece natural, mas com 491 combinações a lista fica ilegível. Vira campo da ficha de segmento</td></tr>
+          <tr><td>Botão de exportar</td><td>Não</td><td>O <code>visualHeader</code> transparente da v2 já devolve "Mostrar como tabela" e exportação nativos</td></tr>
+          <tr><td>Copilot / Q&amp;A na página</td><td>Não <em>ainda</em></td><td>Só depois das medidas corrigidas. Copilot sobre a medida atual devolveria R$ 584 trilhões com confiança. É o P1 em forma de recurso</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Conteúdo do tooltip</h3>
+    <div class="prose stack">
+      <p>Regra: o tooltip complementa, não repete. Se o conteúdo do tooltip é o valor que a barra já mostra, ele não deveria existir.</p>
+      <div class="spec">
+        <div class="spec-label">Tooltip do dumbbell — ao passar sobre uma modalidade</div>
+        <dl class="kv">
+          <dt>Repete (contexto)</dt><dd>Nome da modalidade e as duas taxas — necessário para ancorar</dd>
+          <dt>Acrescenta</dt><dd>Carteira ativa da modalidade em R$ e como % do total · Δ absoluto de carteira vencida em R$ · participação da modalidade no Δ total do país · sparkline de 24 meses da taxa · cobertura do nº de operações no corte</dd>
+          <dt>Não coloca</dt><dd>Nada que seja necessário para entender o gráfico sem hover — regra de acessibilidade da Microsoft</dd>
+          <dt>Tamanho</dt><dd>320 × 200 px, página de tooltip dedicada</dd>
+        </dl>
+      </div>
+      <div class="note"><span class="tag">O tooltip que resolve o problema real</span>A informação mais valiosa aqui é <strong>"esta modalidade responde por X% do aumento total da carteira vencida no país"</strong>. É a ponte entre o número da capa (+63,0%) e o corte específico — e não cabe em nenhum eixo. É exatamente o tipo de informação para o qual o tooltip existe.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 14 ==================== -->
+<section id="s14">
+  <div class="sec-head"><span class="sec-num">14</span><h2>Acessibilidade e resoluções</h2></div>
+  <div class="prose stack-lg">
+
+    <div class="stack">
+      <h3 style="margin-top:0">Contraste — verificado, não presumido</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Par</th><th class="num">Razão</th><th>Veredicto</th></tr></thead>
+          <tbody>
+            <tr><td>#14181C sobre #FFFFFF (texto principal)</td><td class="num">15,8:1</td><td>Passa AAA com folga</td></tr>
+            <tr><td>#A13A30 sobre #FFFFFF (danger)</td><td class="num">6,4:1</td><td>Passa AA para texto normal</td></tr>
+            <tr><td>#5B6470 sobre #FFFFFF (secundário)</td><td class="num">5,9:1</td><td>Passa AA</td></tr>
+            <tr><td>#1E6F58 sobre #FFFFFF (success)</td><td class="num">5,0:1</td><td>Passa AA</td></tr>
+            <tr><td><strong>#A67821 sobre #FFFFFF (ocre)</strong></td><td class="num">4,6:1</td><td><strong>Passa AA por margem estreita.</strong> Use em rótulo e traço de série; para texto pequeno em fundo cinza #F4F6F7 a razão cai para 4,3:1 — <em>reprova</em></td></tr>
+            <tr><td>#8A9099 sobre #FFFFFF (muted)</td><td class="num">3,1:1</td><td><strong>Reprova para texto normal.</strong> Só ≥18,66 px, ou ≥14 px em negrito. Rodapé em 10 px precisa subir para #6E767E</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note warnbox"><span class="tag">Duas correções obrigatórias</span>
+        <strong>(1)</strong> O microcopy em #8A9099 a 10 px reprova em WCAG AA. Trocar por #6E767E (4,6:1) ou subir para 12 px em negrito. <strong>(2)</strong> Nunca usar ocre sobre o fundo cinza da página para texto pequeno — só sobre o branco do container.
+      </div>
+    </div>
+
+    <div class="stack">
+      <h3>Independência de cor</h3>
+      <ul>
+        <li><strong>Δ sempre com sinal e seta</strong>: "▲ +1,11 pp" e "▼ −0,30 pp". A seta e o sinal carregam a informação; a cor apenas reforça.</li>
+        <li><strong>Dumbbell</strong>: os dois pontos usam preenchimento diferente (vazado = ano anterior, sólido = atual), não só cor.</li>
+        <li><strong>Painel duplo</strong>: rótulo direto na ponta de cada série; a linha de referência do BCB é tracejada. Sem legenda de cor.</li>
+        <li><strong>Scatter</strong>: PF e PJ com formas distintas (círculo e losango) além da cor.</li>
+        <li><strong>Matriz</strong>: barra de variância com comprimento e direção; a cor é a quarta pista, depois de posição, comprimento e sinal.</li>
+        <li>Nenhum par proibido pela Microsoft aparece: não há verde+vermelho como categorias, nem azul+roxo, nem verde+cinza como séries adjacentes.</li>
+      </ul>
+    </div>
+
+    <div class="stack">
+      <h3>Leitor de tela e teclado</h3>
+      <ul>
+        <li><strong>Alt text por visual</strong> (≤250 caracteres), descrevendo o insight e não o tipo do gráfico. Exemplo para o painel duplo: <em>"Carteira ativa cresce de R$ 3,3 para R$ 7,4 trilhões entre 2015 e 2025; a taxa de inadimplência cai até 2,05% em 2020 e sobe para 4,10% em 2025, rompendo a tendência."</em></li>
+        <li><strong>Ordem de tabulação</strong> definida: título → slicer → KPIs da esquerda para a direita → painel → dumbbell → insight → botão. Textos decorativos removidos da ordem.</li>
+        <li><strong><code>visualHeader</code> visível e transparente</strong> na v2 do tema — devolve modo foco, "Mostrar como tabela" e navegação por teclado, que o <code>show: false</code> da v1 removia.</li>
+        <li>Nenhuma informação essencial em tooltip.</li>
+      </ul>
+    </div>
+
+    <div class="stack">
+      <h3>Resoluções</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Contexto</th><th>Comportamento</th></tr></thead>
+          <tbody>
+            <tr><td>Desktop 1920×1080</td><td>Escala 1:1. Resolução de projeto</td></tr>
+            <tr><td>Notebook 1366×768</td><td>"Ajustar à página" reduz a ~71%: o corpo de 11 px vira ~7,8 px efetivos. <strong>É o cenário mais provável de leitura e o mais arriscado.</strong> Mitigação: nada abaixo de 11 px no design, e a matriz da página 2 com no máximo 12 linhas visíveis</td></tr>
+            <tr><td>Notebook 1600×900</td><td>~83% — confortável</td></tr>
+            <tr><td>Mobile</td><td>Layout mobile próprio na página 1: 4 KPIs empilhados 2×2 + painel duplo. Páginas 2 a 5 não recebem layout mobile — investigação não se faz no celular, e fingir que sim degrada as duas versões</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note"><span class="tag">Teste que vale mais que a teoria</span>Abra o relatório em 1366×768 com "Ajustar à página" e leia o rodapé de procedência a um braço de distância. Se não der, o corpo está pequeno demais — independentemente do que o design diz em 1920.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ==================== 15 ==================== -->
+<section id="s15">
+  <div class="sec-head"><span class="sec-num">15</span><h2>Especificação Power BI</h2></div>
+  <div class="prose"><p style="margin-bottom:var(--s4)">Cada elemento com o recurso que o implementa. Nada aqui depende de visual pago, e só um elemento depende de visual não-nativo.</p></div>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>Elemento</th><th>Implementação</th><th>Observação de execução</th></tr></thead>
+      <tbody>
+        <tr><td>Título dinâmico</td><td><strong>Nativo</strong> — caixa de texto com valor dinâmico, medida <code>Título · Visão Geral</code></td><td>Já escrita no arquivo DAX. Usa <code>Velocidade da Deterioração</code> para decidir a frase</td></tr>
+        <tr><td>Cartão de KPI</td><td><strong>Nativo</strong> — visual Card (novo) com rótulo de referência</td><td>Com Fluent 2 o card já vem com menos padding e sem fundo no rótulo. Não recriar em SVG</td></tr>
+        <tr><td>Trilho de referência do KPI</td><td><strong>Medida SVG</strong> em DAX, exibida em card ou tabela de 1 linha</td><td>Único caso em que o SVG se paga: barra com marcador de referência não existe nativa. ~20 linhas de DAX</td></tr>
+        <tr><td>Painel duplo (carteira + taxa)</td><td><strong>Nativo</strong> — dois visuais de linha empilhados, eixos X sincronizados por posição e mesmo filtro</td><td>Não usar o combo nativo com eixo secundário. Alinhar a largura do plot manualmente e travar o eixo X nos dois</td></tr>
+        <tr><td>Linha de referência do BCB</td><td><strong>Nativo</strong> — linha de constante do painel de análise, alimentada pela medida <code>Inadimplência BCB (SGS 21082)</code></td><td>Tracejada, cor <code>reference</code> #3E4C59, com rótulo</td></tr>
+        <tr><td><strong>Dumbbell de Δpp</strong></td><td><strong>Deneb</strong> (Vega-Lite)</td><td>O único visual não-nativo do projeto. Vega-Lite: <code>rule</code> ligando dois <code>point</code>, <code>y</code> nominal ordenado por Δ. JSON versionável no repositório — coerente com a cultura do Lumen</td></tr>
+        <tr><td>Matriz de diagnóstico</td><td><strong>Nativo</strong> — Matrix com formatação condicional</td><td>Coluna Δpp com barras de dados nativas; sparkline nativo do Power BI na última coluna</td></tr>
+        <tr><td>Sparkline na matriz</td><td><strong>Nativo</strong></td><td>Sparkline é nativo desde 2022. Não usar SVG aqui</td></tr>
+        <tr><td>Scatter carteira × taxa</td><td><strong>Nativo</strong> — Scatter chart, tamanho = Δpp</td><td>Eixo X em log ligado nas opções do eixo. Formas distintas por cliente exigem duas séries sobrepostas</td></tr>
+        <tr><td>Small multiples do macro</td><td><strong>Nativo</strong> — line chart com small multiples</td><td>Com Fluent 2 o layout padrão passou a 1×4 / 4×1. Para 6 séries, definir 3×2 manualmente</td></tr>
+        <tr><td>Field parameters</td><td><strong>Nativo</strong></td><td>Um para métrica (3 opções), um para cliente (3 opções). Substituem bookmarks</td></tr>
+        <tr><td>Caixa de insight</td><td><strong>Nativo</strong> — caixa de texto com valor dinâmico</td><td>Medida que monta a frase a partir do maior Δpp por modalidade e do contraste PF/PJ</td></tr>
+        <tr><td>Container de visual</td><td><strong>Tema</strong> — <code>lumen_theme_v2.json</code></td><td>Substitui a imagem de fundo. Fundo branco, borda #E3E7EA, raio 4, sem sombra</td></tr>
+        <tr><td>Navegação entre páginas</td><td><strong>Nativo</strong> — navegador de páginas</td><td>Estilizado pelo tema; barra de 2 px no item ativo</td></tr>
+        <tr><td>Faixa sombreada (2015–16, defasagem)</td><td><strong>Nativo</strong> — shading region do painel de análise</td><td>Com rótulo. Se a versão não suportar, retângulo com transparência atrás do visual</td></tr>
+        <tr><td>Alerta de qualidade</td><td><strong>Nativo</strong> — caixa de texto com medida <code>Aviso Decomposição 2015-2016</code></td><td>Colapsa sozinha quando o filtro não inclui o período</td></tr>
+        <tr><td>Ícones</td><td><strong>Figma → SVG</strong></td><td>Só navegação e estado. Nenhum ícone decorativo em título de visual</td></tr>
+        <tr><td>Fundo da página</td><td><strong>Tema</strong>, não imagem</td><td>#F4F6F7 pelas configurações de página do tema v2</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose stack">
+    <div class="note"><span class="tag">Proporção deliberada</span>16 dos 18 elementos são nativos ou tema. Um é SVG e um é Deneb — ambos justificados por uma limitação real do nativo. Essa proporção é o que separa um relatório impressionante de um relatório mantível, e é a resposta certa quando alguém em entrevista pergunta "por que você não usou visual customizado aqui?".</div>
+    <div class="note"><span class="tag">Ordem de execução obrigatória</span>As medidas corrigidas vêm <strong>antes</strong> de qualquer visual. Construir a página sobre <code>[Carteira Ativa Total]</code> da v1 significa refazer todos os visuais depois — no Direct Lake, renomear ou substituir medida quebra as referências dos visuais.</div>
+  </div>
+</section>
+
+<!-- ==================== 16 ==================== -->
+<section id="s16">
+  <div class="sec-head"><span class="sec-num">16</span><h2>Especificação Figma</h2></div>
+  <div class="prose"><p style="margin-bottom:var(--s4)">Figma aqui vale por dois motivos concretos: o projeto terá 5 páginas com estrutura repetida, e o resultado precisa virar um sistema reutilizável nos próximos projetos do seu portfólio. Não vale como editor de fundo — esse era o uso anterior e sai.</p></div>
+
+  <div class="prose stack">
+    <div class="spec">
+      <div class="spec-label">Estrutura do arquivo</div>
+      <dl class="kv">
+        <dt>Frames</dt><dd>5 frames de <strong>1920 × 1080</strong>, um por página, 1:1 com o Power BI. Mais 1 frame de 390 × 844 para o layout mobile da página 1</dd>
+        <dt>Layout grid</dt><dd>Colunas: 12 · tipo <em>stretch</em> · margem 32 · gutter 16. Grade de linha de 4 px sobreposta para conferir alinhamento vertical</dd>
+        <dt>Páginas do arquivo</dt><dd><code>00 Tokens</code> · <code>01 Componentes</code> · <code>02 Wireframe cinza</code> · <code>03 Telas</code> · <code>04 Descartados</code></dd>
+        <dt>04 Descartados</dt><dd>Guarde as versões que você rejeitou, com uma linha dizendo por quê. É o que transforma um arquivo de Figma em evidência de processo numa entrevista</dd>
+      </dl>
+    </div>
+
+    <div class="spec">
+      <div class="spec-label">Variables — nomeadas igual ao JSON do tema, para a tradução ser mecânica</div>
+      <dl class="kv">
+        <dt>Color</dt><dd><code>background</code> <code>surface</code> <code>border</code> <code>text</code> <code>text-secondary</code> <code>text-muted</code> <code>primary</code> <code>primary-tint</code> <code>data-neutral</code> <code>success</code> <code>danger</code> <code>warning</code> <code>reference</code> — mais <code>cat-1</code> a <code>cat-6</code></dd>
+        <dt>Number</dt><dd><code>space-4</code> a <code>space-32</code> · <code>radius-4</code> · <code>col-139</code> · <code>gutter-16</code></dd>
+        <dt>Modos</dt><dd>Dois modos na coleção de cor: <em>Light</em> e <em>Dark</em>. O modo escuro não é opcional decorativo — é o que prova que os tokens estão certos, porque um token mal definido quebra na hora de trocar o modo</dd>
+        <dt>Typography</dt><dd>6 estilos de texto, nomeados pelo papel: <code>page-title</code> <code>kpi-value</code> <code>visual-title</code> <code>axis-label</code> <code>table-value</code> <code>microcopy</code></dd>
+      </dl>
+    </div>
+
+    <div class="spec">
+      <div class="spec-label">Componentes e estados</div>
+      <div class="tw" style="margin:0;border:0">
+        <table style="min-width:32rem">
+          <thead><tr><th>Componente</th><th>Auto layout</th><th>Variantes</th></tr></thead>
+          <tbody>
+            <tr><td><code>KPI/card</code></td><td>Vertical, gap 4, padding 12/14, fill container</td><td><code>state</code>: default · focus · no-data &nbsp;|&nbsp; <code>trend</code>: up · down · neutral &nbsp;|&nbsp; <code>reference</code>: on · off</td></tr>
+            <tr><td><code>Visual/container</code></td><td>Vertical, gap 8, padding 12, fill</td><td><code>quality-flag</code>: none · warning</td></tr>
+            <tr><td><code>Filter/slicer</code></td><td>Horizontal, gap 8, altura fixa 32</td><td><code>state</code>: default · active</td></tr>
+            <tr><td><code>Nav/item</code></td><td>Horizontal, padding 8/12</td><td><code>state</code>: default · active · hover</td></tr>
+            <tr><td><code>Insight/box</code></td><td>Horizontal, gap 12, padding 12/16</td><td><code>type</code>: insight · alert · quality</td></tr>
+            <tr><td><code>Footer/provenance</code></td><td>Horizontal, space-between, altura 28</td><td>Único</td></tr>
+            <tr><td><code>Table/row</code></td><td>Horizontal, altura 28</td><td><code>state</code>: default · focus &nbsp;|&nbsp; <code>variance</code>: positive · negative · neutral</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="note"><span class="tag">O que sai do Figma para o Power BI</span>
+      <strong>Sai:</strong> os ícones em SVG e as decisões — grid, escala de espaçamento, hierarquia, nomes dos tokens. <br>
+      <strong>Não sai:</strong> nenhuma imagem de fundo com cartões desenhados. Container, borda, título e cor vêm do tema JSON, para herdarem formatação condicional e acessibilidade.<br>
+      Essa fronteira é a diferença entre Figma como ferramenta de sistema e Figma como camada de pintura — e é a correção mais importante em relação ao fluxo atual.
+    </div>
+
+    <div class="note"><span class="tag">Sequência de trabalho</span>Wireframe cinza primeiro, sempre. Só depois que a hierarquia funcionar em escala de cinza é que os tokens de cor entram. Se a página só faz sentido depois de colorida, a hierarquia está sendo carregada pela cor — e vai desabar para quem tem daltonismo, em impressão e em projetor.</div>
+  </div>
+</section>
+
+<!-- ==================== 17 ==================== -->
+<section id="s17">
+  <div class="sec-head"><span class="sec-num">17</span><h2>Antes e depois</h2></div>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th style="width:16%">Dimensão</th><th style="width:42%">Versão atual (mock)</th><th>Versão proposta</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Layout</strong></td><td>Uma página, proporção 16:10, containers que não fecham — sobra um retângulo vazio de ~1.050×300 px</td><td>Cinco páginas, 1920×1080, grid de 12 colunas com faixas de altura definida; nenhum container maior que o conteúdo</td></tr>
+        <tr><td><strong>Hierarquia</strong></td><td>Boa na faixa superior; some abaixo — os dois blocos da direita têm o mesmo peso visual de coisas com importâncias muito diferentes</td><td>Quatro níveis explícitos, criados por tamanho, posição e espaço antes da cor; sobrevive em escala de cinza</td></tr>
+        <tr><td><strong>KPIs</strong></td><td>4, com comparação a/a — já bom. Destaque no menos acionável; verde em crescimento de carteira; unidades misturadas</td><td>4, com destaque no que abre o diagnóstico, cor só no julgamento, referência externa no lugar da meta ausente, rodapé de contexto por cartão</td></tr>
+        <tr><td><strong>Gráficos</strong></td><td>Eixo duplo barra+linha sem nenhum eixo de valor rotulado; ranking de UF por tamanho absoluto com trilho que não codifica nada</td><td>Painel duplo com as duas escalas legíveis; dumbbell de variação; matriz de diagnóstico; scatter; small multiples — cada um ligado a uma pergunta declarada</td></tr>
+        <tr><td><strong>Cores</strong></td><td>Paleta certa e contida. Verde/vermelho usados sem regra semântica firme; ocre também é a cor de <code>maximum</code> na formatação condicional</td><td>Mesma paleta, função redefinida: ocre = foco, slate = resto, verde/vermelho = só qualidade da carteira, slate escuro = referência externa</td></tr>
+        <tr><td><strong>Interação</strong></td><td>Nenhuma — é um PNG. Promete uma "camada de Diagnóstico" que não existe</td><td>1 slicer, 2 field parameters, cross-filter, drill-through, tooltip de página, anotações de contexto</td></tr>
+        <tr><td><strong>Storytelling</strong></td><td>Excelente abertura (headline conclusivo + diagnóstico escrito + próximo passo). A história começa e para</td><td>Mesma abertura, agora calculada por medida, e com os três capítulos seguintes construídos</td></tr>
+        <tr><td><strong>UX</strong></td><td>Sem navegação, sem filtro, sem retorno</td><td>Navegação persistente, retorno obrigatório no drill-through, um único filtro visível</td></tr>
+        <tr><td><strong>Densidade</strong></td><td>Baixa demais: 8 objetos numa tela de 1080 px, com um terço vazio</td><td>Página 1 com 10 objetos e faixas cheias; página 2 densa por projeto; página 5 deliberadamente textual</td></tr>
+        <tr><td><strong>Clareza</strong></td><td>A tese é clara; os números do gráfico não são legíveis</td><td>Todo valor exibido tem escala, unidade e período; toda taxa tem fonte declarada</td></tr>
+        <tr><td><strong>Correção</strong></td><td>Os números do mock estão certos — conferi todos contra o banco. Mas as medidas por trás somam estoque no tempo</td><td>Medidas semiaditivas corrigidas; cobertura do dado exposta; divergência com o BCB declarada</td></tr>
+        <tr><td><strong>Nível profissional</strong></td><td>Portfólio bom — parece um projeto</td><td>Portfólio de consultoria — parece trabalho entregue</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Avaliação</h3>
+  <div class="tw">
+    <table>
+      <thead><tr><th>Critério</th><th class="num">Atual</th><th class="num">Proposta</th><th>O que move a nota</th></tr></thead>
+      <tbody>
+        <tr><td>Visual design</td><td class="num">7</td><td class="num">8</td><td>A paleta e a tipografia já eram boas; ganha em fechamento de layout e consistência de container</td></tr>
+        <tr><td>UX</td><td class="num">3</td><td class="num">8</td><td>De zero interação e zero navegação para um caminho de investigação completo</td></tr>
+        <tr><td>Hierarquia</td><td class="num">6</td><td class="num">9</td><td>Hierarquia forte no topo e ausente embaixo → quatro níveis explícitos em toda a página</td></tr>
+        <tr><td>Data visualization</td><td class="num">4</td><td class="num">9</td><td>Eixo duplo ilegível e ranking trivial → visuais escolhidos por pergunta, com alternativas registradas</td></tr>
+        <tr><td>Storytelling</td><td class="num">7</td><td class="num">9</td><td>Abertura excelente que não continuava → narrativa completa em quatro páginas mais a prova</td></tr>
+        <tr><td>KPI design</td><td class="num">6</td><td class="num">9</td><td>Comparação já existia; ganha referência externa, contexto por cartão e destaque no lugar certo</td></tr>
+        <tr><td>Interatividade</td><td class="num">1</td><td class="num">8</td><td>Era uma imagem</td></tr>
+        <tr><td>Clareza</td><td class="num">5</td><td class="num">9</td><td>Tese clara, gráfico ilegível → toda escala rotulada e toda fonte declarada</td></tr>
+        <tr><td>Profissionalismo</td><td class="num">6</td><td class="num">10</td><td>Reconciliação com o BCB, cobertura do dado e definição de medida saem do repositório e entram na tela</td></tr>
+        <tr><td>Acessibilidade</td><td class="num">4</td><td class="num">8</td><td>Contraste verificado, independência de cor, alt text, ordem de tabulação, cabeçalho de visual devolvido</td></tr>
+        <tr><td>Modernidade</td><td class="num">7</td><td class="num">9</td><td>Fluent 2, canvas 1920×1080, field parameters, tema em camada, título calculado</td></tr>
+        <tr><td><strong>Média</strong></td><td class="num"><strong>5,1</strong></td><td class="num"><strong>8,7</strong></td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="prose">
+    <div class="note"><span class="tag">Sobre a nota da versão atual</span>5,1 não é uma nota ruim para um mock de uma página feito antes da fase de dashboard — o projeto está na Sprint 7 e a Sprint 8 é que era a do dashboard. As duas notas mais baixas (interatividade 1, visual design da série 4) medem coisas que ainda não foram construídas, não erros de julgamento. As notas que <em>medem julgamento</em> — storytelling 7, KPI 6, hierarquia 6 — já estão acima da média do que se vê em portfólio de BI.</div>
+  </div>
+</section>
+
+<!-- ==================== 18 ==================== -->
+<section id="s18">
+  <div class="sec-head"><span class="sec-num">18</span><h2>Benchmark de contratação</h2></div>
+  <div class="prose stack-lg">
+
+    <div class="stack">
+      <p><strong>Se este dashboard fosse apresentado num processo seletivo de Senior Data Analyst, BI ou Data Visualization, como seria percebido?</strong></p>
+      <p>A resposta muda conforme quem avalia — e o Lumen tem uma assimetria interessante.</p>
+    </div>
+
+    <div class="tw">
+      <table>
+        <thead><tr><th>Avaliador</th><th>Primeira reação</th><th>Onde ele vai cutucar</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Engenheiro de dados / arquiteto</strong></td>
+            <td>Muito acima da média. Medallion com ADRs, star schema com surrogate key justificada, dbt com testes, CI, Direct Lake construído via TOM. Isso é raro em portfólio</td>
+            <td>Vai abrir o modelo semântico. Se encontrar <code>SUM</code> sobre saldo semiaditivo, a impressão inverte na hora — porque prova que a documentação estava certa e o modelo não seguiu. <strong>É o único risco real do projeto</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Especialista em dataviz</strong></td>
+            <td>Boa tipografia, paleta contida, headline conclusivo — sinais de quem estudou. Mas hoje vai parar no gráfico sem eixos</td>
+            <td>Vai perguntar por que eixo duplo, por que ranking por tamanho absoluto, e o que preenche o terço vazio da tela</td>
+          </tr>
+          <tr>
+            <td><strong>Gestor de área de negócio</strong></td>
+            <td>Entende a tese em 5 segundos — o headline faz o trabalho</td>
+            <td>Vai perguntar "e daí, o que eu faço?". Hoje a resposta é um botão para uma página que não existe</td>
+          </tr>
+          <tr>
+            <td><strong>Recrutador não técnico</strong></td>
+            <td>Vê um projeto sério com README bem escrito</td>
+            <td>Não vai cutucar. Vai passar adiante</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid g3">
+      <div class="verdict v-keep" style="border-left-width:5px">
+        <span class="vt">Já é nível profissional</span>
+        <p>Arquitetura medallion com ADRs registrando <em>correções</em>. Star schema com decisões justificadas no próprio SQL. 20 testes pytest + 23 dbt. Reconciliação com a fonte oficial documentada, com a divergência assumida em vez de escondida. Direct Lake construído programaticamente. Dicionário de dados que separa verificado de hipótese.</p>
+      </div>
+      <div class="verdict v-improve" style="border-left-width:5px">
+        <span class="vt">Ainda parece intermediário</span>
+        <p>Uma página só. Gráfico principal sem eixos. Fundo desenhado em Figma e exportado como PNG. Ranking por tamanho absoluto. Texto de insight escrito à mão. Medidas que somam estoque no tempo — este é o item que mais destoa do resto do projeto.</p>
+      </div>
+      <div class="verdict v-add" style="border-left-width:5px">
+        <span class="vt">Falta para nível enterprise</span>
+        <p>Relatório versionado em PBIP/PBIR junto do resto do repositório. Tema como produto, não como arquivo solto. Camada de qualidade visível ao usuário final, não só ao desenvolvedor. Orquestração (o próprio ADR-008 registra que os notebooks ainda rodam manualmente). Um segundo par de olhos: o projeto já tem histórico de revisão sênior nos ADR-003 e 004 — repita para o relatório.</p>
+      </div>
+    </div>
+
+    <div class="note"><span class="tag">O veredicto honesto</span>
+      O Lumen é um projeto de <strong>engenharia de dados de nível claramente acima da média</strong> com uma <strong>camada de apresentação ainda embrionária</strong> — o que é normal, porque a Sprint do dashboard nem começou. A oportunidade é que o esforço restante é pequeno em relação ao que já foi feito: a diferença entre a nota 5,1 e a 8,7 são cerca de duas semanas de trabalho, contra os meses que a engenharia levou.
+      <br><br>E há um detalhe estratégico: <strong>a página de notas metodológicas é a mais barata de construir e a que mais impressiona</strong>, porque o conteúdo já está escrito no <code>docs/data-dictionary.md</code>. É copiar para o canvas.
+    </div>
+
+  </div>
+</section>
+
+<!-- ==================== 19 ==================== -->
+<section id="s19">
+  <div class="sec-head"><span class="sec-num">19</span><h2>Checklist de qualidade</h2></div>
+  <div class="prose">
+    <h4>Correção do número — bloqueante</h4>
+    <ul class="check">
+      <li>Toda medida de saldo usa <code>LASTNONBLANKVALUE</code>, não <code>SUM</code></li>
+      <li>Cada medida foi validada sem filtro de competência e devolve valor plausível</li>
+      <li>Taxa de inadimplência do SCR conferida contra a série SGS 21082 na mesma competência</li>
+      <li>Cobertura do <code>numero_de_operacoes</code> exibida sempre que a contagem aparece</li>
+      <li>Nenhum visual cruza <code>fato_credito</code> e <code>fato_indicador_macro</code> sem tratar os 6 meses de defasagem</li>
+      <li>Nenhuma medida sobre <code>fato_indicador_macro</code> sem filtro explícito de <code>nome_serie</code></li>
+      <li>Divergência de 69 linhas entre o local e o Fabric reconciliada ou registrada</li>
+    </ul>
+
+    <h4>Composição</h4>
+    <ul class="check">
+      <li>Canvas 1920×1080, grid de 12 colunas, tudo alinhado</li>
+      <li>Nenhum container maior que o conteúdo — nenhum retângulo vazio</li>
+      <li>Espaçamento só em múltiplos de 4</li>
+      <li>Máximo 10 objetos na página 1</li>
+      <li>Uma forma de separação por bloco: fundo branco + hairline, sem sombra</li>
+      <li>Todos os títulos de visual no mesmo corpo (16)</li>
+      <li>A imagem de fundo do Figma foi removida e os containers vêm do tema</li>
+    </ul>
+
+    <h4>Cor e tipografia</h4>
+    <ul class="check">
+      <li>Verde e vermelho aparecem só em qualidade da carteira</li>
+      <li>A série em foco é a única em ocre; todas as demais em <code>data-neutral</code></li>
+      <li><code>maximum</code> do tema não é mais a cor da marca</li>
+      <li>Georgia só no número grande do KPI — nunca em tabela, matriz ou eixo</li>
+      <li>Microcopy a 10 px usa #6E767E, não #8A9099</li>
+      <li>Contraste verificado com ferramenta, não estimado</li>
+    </ul>
+
+    <h4>Leitura</h4>
+    <ul class="check">
+      <li>Todo gráfico responde a uma pergunta que cabe em uma frase</li>
+      <li>Todo eixo de valor tem escala visível ou rótulo de dado</li>
+      <li>Toda taxa exibida diz de qual fonte veio</li>
+      <li>Todo Δ traz sinal e seta, além da cor</li>
+      <li>O título da página é calculado por medida, não escrito à mão</li>
+      <li>O insight é gerado por medida e muda quando o dado muda</li>
+    </ul>
+
+    <h4>Acesso e prova</h4>
+    <ul class="check">
+      <li>Alt text em cada visual, descrevendo o insight, ≤250 caracteres</li>
+      <li>Ordem de tabulação definida; decorativos fora dela</li>
+      <li>Nenhuma informação essencial só em tooltip</li>
+      <li><code>visualHeader</code> visível e transparente</li>
+      <li>Rodapé de procedência em todas as páginas</li>
+      <li>Página de notas metodológicas publicada com a reconciliação</li>
+      <li>Layout mobile na página 1</li>
+      <li>Relatório versionado em PBIP junto do repositório</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ==================== 20 ==================== -->
+<section id="s20">
+  <div class="sec-head"><span class="sec-num">20</span><h2>Plano de implementação</h2></div>
+  <div class="prose"><p style="margin-bottom:var(--s6)">Quatro blocos, na ordem em que as dependências exigem. O primeiro não produz nada visível — e é o único inegociável.</p></div>
+
+  <div class="prose stack-lg">
+
+    <div class="phase">
+      <div class="ph">Bloco 1 · ~2 dias · nada visível, tudo depende</div>
+      <h3 style="margin-top:var(--s2)">Corrigir o modelo semântico</h3>
+      <ol>
+        <li>Aplicar as medidas de <code>powerbi/medidas_certificadas_v2.dax</code> no modelo <code>lumen_semantico</code>, via as mesmas ferramentas TOM/XMLA do ADR-009 — o processo já está documentado lá.</li>
+        <li>Validar cada medida <strong>sem filtro</strong>: <code>[Carteira Ativa]</code> deve devolver ~R$ 7,44 Tri, não R$ 584 Tri.</li>
+        <li>Adicionar <code>Cobertura Nº de Operações</code>, <code>Inadimplência BCB (SGS 21082)</code> e <code>Defasagem SCR vs SGS</code>.</li>
+        <li>Promover população a atributo de <code>dim_uf</code> (ou dimensão UF × ano) a partir de <code>silver.populacao_uf</code>, declarando a ausência de 2022–2023.</li>
+        <li>Registrar tudo como <strong>ADR-010</strong>, no formato que o projeto já usa: contexto, decisão, alternativas, consequências. A correção de uma medida errada documentada é mais impressionante que a medida ter nascido certa.</li>
+      </ol>
+      <p style="font-size:.88rem;color:var(--ink-2)"><strong>Critério de pronto:</strong> uma consulta DAX sem filtro de competência devolve valores plausíveis para todas as medidas certificadas.</p>
+    </div>
+
+    <div class="phase">
+      <div class="ph">Bloco 2 · ~3 dias · fundação visual</div>
+      <h3 style="margin-top:var(--s2)">Tema, grid e a página 1</h3>
+      <ol>
+        <li>Aplicar <code>lumen_theme_v2.json</code> sobre o tema base <strong>Fluent 2</strong> (View › Tema › Tema base).</li>
+        <li>Canvas 1920×1080; grid de 12 colunas com margem 32 e gutter 16.</li>
+        <li>Construir a página 1 <strong>sem a imagem de fundo</strong>, com os containers vindos do tema.</li>
+        <li>Substituir o headline fixo pela medida <code>Título · Visão Geral</code>.</li>
+        <li>Trocar o eixo duplo pelo painel duplo, com os dois eixos rotulados e a linha de referência do BCB.</li>
+        <li>Rodapé de procedência.</li>
+      </ol>
+      <p style="font-size:.88rem;color:var(--ink-2)"><strong>Critério de pronto:</strong> a página 1 lida em 1366×768 com "Ajustar à página", sem nenhum texto ilegível e sem área vazia.</p>
+    </div>
+
+    <div class="phase">
+      <div class="ph">Bloco 3 · ~4 dias · a narrativa</div>
+      <h3 style="margin-top:var(--s2)">Páginas 2, 4 e 5</h3>
+      <ol>
+        <li><strong>Página 5 primeiro.</strong> É a mais rápida — o conteúdo já está no <code>data-dictionary.md</code> — e é a que mais diferencia. Fazer antes garante que ela exista mesmo se o prazo apertar.</li>
+        <li>Página 2 com a matriz de diagnóstico, o scatter e o dumbbell em Deneb. O JSON do Deneb entra versionado em <code>powerbi/deneb/</code>.</li>
+        <li>Página 4 com o drill-through e o botão de retorno.</li>
+        <li>Field parameters de métrica e de cliente.</li>
+        <li>Antes de publicar o insight sobre crédito rural, <strong>rodar o cruzamento modalidade × UF</strong> para confirmar a hipótese levantada em <a href="#s02">§02</a>.</li>
+      </ol>
+      <p style="font-size:.88rem;color:var(--ink-2)"><strong>Critério de pronto:</strong> partindo do KPI destacado da página 1, chega-se a um segmento específico em no máximo três cliques.</p>
+    </div>
+
+    <div class="phase">
+      <div class="ph">Bloco 4 · ~2 dias · acabamento e prova</div>
+      <h3 style="margin-top:var(--s2)">Página 3, acessibilidade e versionamento</h3>
+      <ol>
+        <li>Página 3 com small multiples do macro e a faixa sombreada da defasagem.</li>
+        <li>Passagem de acessibilidade completa: contraste medido, alt text, ordem de tabulação, marcadores.</li>
+        <li>Layout mobile da página 1.</li>
+        <li>Salvar o relatório em <strong>PBIP</strong> e versionar no mesmo repositório, ao lado do dbt e dos notebooks — relatório e modelo passam a viver no mesmo Git.</li>
+        <li>Atualizar o README com uma seção de dashboard: screenshot, link e as três decisões de design que você mais defende.</li>
+      </ol>
+      <p style="font-size:.88rem;color:var(--ink-2)"><strong>Critério de pronto:</strong> um estranho clona o repositório, lê o README e entende o que o dashboard responde sem abrir o Power BI.</p>
+    </div>
+
+    <div class="note"><span class="tag">Se você só tiver dois dias</span>
+      Faça o <strong>Bloco 1</strong> e a <strong>página 5</strong>. Corrigir a semiaditividade fecha o único buraco que um avaliador técnico encontraria, e a página de notas metodológicas transforma o rigor que já existe no repositório em algo visível. As duas coisas juntas mudam mais a percepção do projeto do que qualquer melhoria estética na página 1.
+    </div>
+
+  </div>
+</section>
+
+<footer class="footer">
+  <p>Auditoria e proposta produzidas em 7 de setembro de 2026, a partir do repositório <code>lumen-semantic-layer</code> e de consultas em modo somente-leitura ao <code>lumen.duckdb</code> (34.461.901 linhas em <code>gold.fato_credito</code>, 132 competências).</p>
+  <p style="margin-top:var(--s2)">Todos os valores citados foram consultados no banco do projeto. Onde um dado seria necessário e não existe — meta, orçamento, PIB estadual, população nos anos de 2022 e 2023 —, isso está dito no ponto em que a ausência importa. Arquivos gerados: <code>powerbi/medidas_certificadas_v2.dax</code> e <code>powerbi/lumen_theme_v2.json</code>.</p>
+</footer>
+
+</main>
+</div>
+</div>
