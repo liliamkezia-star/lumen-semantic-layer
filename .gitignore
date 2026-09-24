@@ -52,3 +52,6 @@ lumen_ci.duckdb
 
 # Log de interacoes do agente: guarda perguntas de quem usa (ver agent/registro.py)
 agent/interacoes/
+
+# Saidas geradas por assistentes, fora da estrutura do projeto
+Claude outputs/
