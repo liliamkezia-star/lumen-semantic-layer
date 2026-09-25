@@ -55,3 +55,6 @@ agent/interacoes/
 
 # Saidas geradas por assistentes, fora da estrutura do projeto
 Claude outputs/
+
+# Config local do launcher do editor
+.claude/

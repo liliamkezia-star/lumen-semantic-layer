@@ -1,318 +1,233 @@
-# Lumen — Camada Semântica "AI-Ready" + Agente Analítico Governado
+# Lumen
 
-> 🚧 Projeto em desenvolvimento — 9 de 12 sprints do plano entregues:
-> engenharia de dados, migração para Microsoft Fabric, modelo semântico,
-> dashboard Power BI, agente analítico governado e o gabarito que mede
-> se a governança vale a pena. No [benchmark](#benchmark-a-camada-certificada-vale-a-pena)
-> de 60 perguntas, o agente faz **59/60** contra **53/60** do mesmo
-> modelo escrevendo SQL livre sobre as mesmas tabelas.
+**Camada semântica certificada sobre dados públicos de crédito do Brasil, com um agente analítico que não pode inventar métrica.**
 
-## Visão
+Pipeline em arquitetura medalhão no Microsoft Fabric, modelo semântico Direct Lake, dashboard Power BI de 5 páginas e um agente que responde perguntas em português usando **só** medidas certificadas — o modelo de linguagem escolhe de listas fechadas, e quem monta a consulta é o código.
 
-O Lumen é um projeto de engenharia de dados e BI que constrói uma camada
-semântica certificada sobre dados públicos de crédito e indicadores
-econômicos do Brasil (Banco Central, IBGE), com um agente analítico
-governado capaz de responder perguntas em linguagem natural com base em
-métricas certificadas — sem gerar SQL/DAX livre.
+---
 
-## Status atual
+## O resultado
 
-O projeto segue um plano de 12 sprints:
+A tese de que uma camada certificada reduz erro de IA costuma ser afirmada e raramente medida. Aqui ela foi medida, com o **mesmo modelo** nos dois lados e sobre as **mesmas tabelas**:
 
-| Sprint | Entrega | Status |
+| | Agente governado | Text-to-SQL livre |
 |---|---|---|
-| 1–5 | Fundação, Bronze, Silver, Gold (star schema em dbt) | ✅ |
-| 6 | Modelo semântico Direct Lake + medidas certificadas | ✅ |
-| 7 | AI-readiness: sinônimos, BPA na CI, RLS | ⛔ RLS **descartado** na v1.0 com razão registrada; os outros itens viram backlog (ver [ADR-017](docs/decision-log/adr-017-rls-fora-do-escopo-da-v1.md)) |
-| 8 | Dashboard Power BI (5 páginas) | ✅ |
-| 9 | ML explicável: previsão de inadimplência e anomalias | ⬜ |
-| 10 | Agente analítico governado | ✅ |
-| 11 | Gabarito de 60 perguntas + baseline text-to-SQL | ✅ |
-| 12 | Benchmark agente × text-to-SQL e lançamento | 🔄 benchmark concluído ([resultados](evaluation/resultados/rodada2.md)); lançamento em curso |
+| **Acertos em 60 perguntas** | **59/60** | **53/60** |
+| Semiaditividade (pegadinha) | 10/10 | 7/10 |
+| Recusas indevidas | 0 | 1 |
+| Latência mediana | 21 s | 24 s |
 
-- **Nota sobre numeração:** ADRs e commits anteriores a setembro de 2026
-  chamam o dashboard de "Sprint 7" e o agente de "Sprint 8". A numeração
-  acima é a do plano original, que passa a valer daqui em diante.
-- **Deliberadamente fora de escopo:** faixa sombreada da defasagem SCR/SGS
-  na Página 3 e layout mobile da Página 1 — cortes conscientes, não
-  esquecimentos (ver seção [Dashboard](#dashboard))
-- **Última atualização:** setembro de 2026
+**A diferença não está no básico.** Em consulta direta e ranking os dois vão bem. Ela abre nas pegadinhas — e **5 dos 7 erros do text-to-SQL são o mesmo erro**: a pergunta pede o dado do SCR.data, ele consulta a série oficial do Banco Central e apresenta o número como se fosse do SCR, citando a fonte errada.
 
-### O que já existe
+Número real, ordem de grandeza certa, fonte citada. Nenhum detector de alucinação pega isso.
+
+→ [Relatório completo, erro a erro](evaluation/resultados/rodada2.md) · [Metodologia e critérios](evaluation/METODOLOGIA.md) · [detalhes do benchmark](#o-benchmark)
+
+![Página 1 do dashboard Lumen](docs/assets/dashboard-pagina1.png)
+
+---
+
+## O que existe
 
 | Camada | Conteúdo |
 |---|---|
-| Bronze | 3 fontes ingeridas, append-only, com validação de schema e retry — rodando no Fabric (Lakehouse) |
-| Silver | 5 tabelas limpas, tipadas e deduplicadas — rodando no Fabric |
-| Gold | Star schema com 4 dimensões e 2 fatos (~34,4M linhas no fato principal) — dbt rodando sobre o Fabric via `dbt-fabricspark` |
-| Modelo semântico | `lumen_semantico`, Direct Lake, catálogo de medidas certificadas versionado em `powerbi/medidas_certificadas_v2.dax`, publicado no workspace `lumen-dev` |
-| Dashboard | Power BI de 5 páginas sobre o modelo semântico — tema (`powerbi/lumen_theme_v2.json`), visuais Deneb versionados em `powerbi/deneb/` (ver seção [Dashboard](#dashboard)) |
-| Agente | Perguntas em português respondidas com as medidas certificadas, sem DAX livre, com interface Streamlit autenticada (ver seção [Agente analítico](#agente-analítico)) |
+| **Bronze** | 3 fontes ingeridas, append-only, com validação de schema e retry — no Lakehouse do Fabric |
+| **Silver** | 5 tabelas limpas, tipadas e deduplicadas |
+| **Gold** | Star schema com 4 dimensões e 2 fatos (~34,4M linhas no fato principal), em dbt sobre o Fabric via `dbt-fabricspark` |
+| **Modelo semântico** | `lumen_semantico` em Direct Lake, com o catálogo de medidas versionado em [`powerbi/medidas_certificadas_v2.dax`](powerbi/medidas_certificadas_v2.dax) |
+| **Dashboard** | 5 páginas em Power BI sobre o modelo semântico: visão geral, recorte geográfico, contexto macro, ficha de segmento (drill-through) e notas metodológicas |
+| **Agente** | Perguntas em português respondidas com medidas certificadas, com interface Streamlit autenticada |
+| **Benchmark** | 60 perguntas com gabarito verificado por dois caminhos independentes, e um baseline text-to-SQL para comparar |
 
-**Qualidade:** 86 testes pytest (dados, governança do agente e corretor
-da avaliação) + 23 testes dbt, rodando na CI a cada PR.
+**Stack:** Python, dbt, GitHub Actions, Microsoft Fabric (Lakehouse + Direct Lake), Power BI, Deneb/Vega-Lite, Streamlit e a API gratuita do Google (Gemini e Gemma). Execução local com DuckDB continua disponível como alvo de desenvolvimento e CI.
 
-**Validação:** reconciliação do total agregado do SCR.data com a série
-oficial do BCB realizada — convergência com divergência metodológica
-documentada (ver `docs/data-dictionary.md`).
+**Qualidade:** 132 testes pytest e 20 testes dbt, rodando na CI a cada PR. O total agregado do SCR.data foi reconciliado com a série oficial do BCB, com a divergência metodológica documentada em [`docs/data-dictionary.md`](docs/data-dictionary.md).
 
-## Stack atual
+---
 
-Python, dbt, GitHub Actions, Microsoft Fabric (Lakehouse + Direct Lake),
-Power BI (Direct Lake + tema customizado) e Deneb/Vega-Lite para o único
-visual não-nativo do dashboard. O agente usa a API gratuita do Google
-(Gemini e Gemma 4) e Streamlit. Execução local com DuckDB permanece
-disponível como target de desenvolvimento/CI (ver ADR-001 e ADR-008 para
-o histórico da migração).
-
-## Dashboard
-
-![Página 1 — Visão Geral do dashboard Lumen](docs/assets/dashboard-pagina1.png)
-
-> A imagem acima é da Página 1 (Visão Geral). O relatório completo tem 5
-> páginas — Visão Geral, Onde, Contexto Macro, Ficha de Segmento
-> (drill-through) e Notas Metodológicas — e roda 100% sobre o modelo
-> semântico Direct Lake (`powerbi/lumen_dashboard.pbix`), sem publicação
-> pública (workspace `lumen-dev` é um ambiente de desenvolvimento).
-
-### Três decisões de design que eu mais defendo
-
-1. **Toda medida de "período atual" passa por uma única âncora dinâmica,
-   nunca por `MAX()`, `SAMEPERIODLASTYEAR()` ou data literal.**
-   `dim_calendario` é gerada por `dbt_utils.date_spine()` até 2026-12-31 —
-   bem além do fim real dos dados (dez/2025) — e o relacionamento
-   `fato_credito → dim_calendario` é OneDirection. Sem uma âncora que force
-   `CROSSFILTER(..., BOTH)`, qualquer medida de "competência atual" escaneia
-   o calendário inteiro e erra silenciosamente. Essa mesma classe de erro
-   apareceu 4 vezes neste projeto (`ADR-010`, `ADR-011`, `ADR-014`, e de
-   novo no aviso de decomposição 2015-2016) até virar regra fixa: toda
-   medida nova passa por `[Última Competência com Crédito]`, sem exceção,
-   verificada uma a uma antes de ser certificada.
-2. **Field parameter trocado por slicer na Página 2 (`ADR-013`), contra a
-   recomendação literal da auditoria.** A auditoria pedia field parameter
-   para o corte de cliente (PF/PJ) porque "muda a pergunta" em vez de só
-   filtrar. A documentação oficial do Power BI é explícita: não dá para
-   criar parâmetros em fontes de conexão live sem modelo local — e um
-   modelo local decisão que já rejeitei antes (`ADR-009`) para não duplicar
-   34,4M de linhas. Prefiro manter a arquitetura Direct Lake e usar um
-   slicer comum, com o trade-off documentado, a violar uma decisão
-   estrutural anterior por uma diferença semântica de interação.
-3. **O painel duplo da Página 1 resolve o desalinhamento desligando o eixo
-   Y em vez de compensar por pixel.** As duas séries (carteira ativa e
-   taxa de inadimplência) têm rótulos de eixo Y de larguras diferentes
-   ("R$ 8 Tri" vs. "4%"), e o Power BI calcula a área de plot de cada
-   visual de forma independente — sem alinhamento nativo entre eles. A
-   correção óbvia seria empurrar um painel alguns pixels e redimensionar o
-   outro, mas isso quebra a cada mudança de fonte, DPI ou resolução de
-   tela. Desligar o eixo de valor (mantendo gridlines, rótulo de ponta e
-   rótulo da linha de referência do BCB, que já dão a escala) resolve o
-   alinhamento de um jeito que não depende de nenhuma medida em pixels.
-
-## Agente analítico
-
-Responde perguntas em português sobre crédito no Brasil usando **só** as
-medidas certificadas do modelo semântico. O modelo de linguagem nunca
-escreve DAX: ele escolhe, de listas fechadas, uma medida, cortes (UF,
-modalidade, cliente, competência...) e valores, e o código monta a
-consulta de forma determinística.
+## Como o agente funciona
 
 ```
 pergunta ──▶ LLM escolhe medida + cortes ──▶ validação contra o catálogo ──▶ DAX montado por código
-                        ▲                            │ inválido: recusa com as opções válidas
-                        └──── resultado formatado ◀──┴── executeQueries no lumen_semantico
+                    ▲                              │ inválido: recusa com as opções válidas
+                    └──── resultado formatado ◀────┴── executeQueries no lumen_semantico
 ```
 
-**O que isso garante, e como foi medido** (avaliação de 2026-09-18, 16
-casos, modelo `gemma-4-26b-a4b-it`, gabarito calculado na hora pela
-própria camada certificada):
+O ponto inteiro cabe numa frase: **o modelo de linguagem nunca escreve consulta.** Ele preenche um formulário — medida, corte e valor, cada um de uma lista fechada. Pedido fora da lista é recusado antes de virar consulta, e ele recebe de volta as opções válidas.
 
-- **12/12** perguntas factuais com valor e DAX certos — taxa atual,
-  filtro por UF, competência histórica, rankings, referência do BCB.
-- **4/4** recusas corretas — banco, previsão, município, juros — sem
-  número inventado e oferecendo o que dá para responder.
-- **Lastro:** todo número da resposta tem que ter vindo de uma consulta
-  na conversa. Placar: 15/16 pela regra original, 16/16 depois de um
-  ajuste feito *após* a falha — o motivo está registrado no ADR-015.
+Duas regras completam a governança:
 
-Detalhes das proteções em [`agent/guardrails.md`](agent/guardrails.md).
-Decisões e o diagnóstico de acesso ao modelo (por que a conexão usa
-identidade fixa, sem SSO) em
-[ADR-015](docs/decision-log/adr-015-arquitetura-agente-governado.md).
+- **Lastro.** Todo número que aparece na resposta tem que ter vindo de uma consulta executada naquela conversa, nunca da memória do modelo.
+- **Formatação pelo catálogo.** A unidade de cada medida é declarada, então quem decide se `0,041` vira "4,10%" é o código. Deixar isso a cargo do LLM é convidar o erro para entrar.
 
-## Benchmark: a camada certificada vale a pena?
+Detalhes em [`agent/guardrails.md`](agent/guardrails.md) e [ADR-015](docs/decision-log/adr-015-arquitetura-agente-governado.md).
 
-É a pergunta que justifica o projeto inteiro. Um agente preso a medidas
-certificadas acerta mais do que o **mesmo modelo** escrevendo SQL livre
-sobre **as mesmas tabelas**? Para a resposta valer alguma coisa, as duas
-pontas usam `gemma-4-26b-a4b-it`, e o gabarito das 60 perguntas foi
-verificado por dois caminhos independentes — SQL escrito à mão na Gold e
-DAX certificado — **antes** de qualquer rodada, com os critérios de
-correção fechados de antemão.
+---
 
-| Categoria | Agente | Baseline text-to-SQL |
+## O benchmark
+
+Um benchmark feito por quem construiu a solução tem um problema óbvio de viés. O que resolve não é boa intenção, é amarrar as próprias mãos antes de começar:
+
+- **Gabarito verificado por dois caminhos independentes** antes de qualquer rodada: SQL escrito à mão na Gold e a medida certificada. Divergiram em zero das 50 perguntas numéricas.
+- **Critérios de correção fixados antes de rodar**, e toda alteração posterior registrada com data e motivo em [`METODOLOGIA.md`](evaluation/METODOLOGIA.md).
+- **A primeira rodada inteira foi invalidada** por três bugs de infraestrutura meus — token vencido, descrição de medida vazando valor, e `2025-12` lido como `-12`. Ela continua no repositório, marcada como inválida, porque apagar teria sido mais limpo e menos honesto.
+- **Todas as respostas erradas foram lidas uma a uma** antes de o placar ser aceito. Foi assim que um falso positivo do detector de lastro foi pego antes de virar resultado publicado.
+
+### Acurácia por categoria
+
+| Categoria | Agente | Text-to-SQL |
 |---|---|---|
 | A — Consulta direta | 10/10 | 9/10 |
 | B — Filtros e cortes | 9/10 | 9/10 |
 | C — Rankings e comparações | 10/10 | 10/10 |
 | D — Semiaditividade (pegadinha) | **10/10** | **7/10** |
-| E — Macro e deflacionamento (pegadinha) | 10/10 | 8/10 |
+| E — Macro e deflacionamento (pegadinha) | **10/10** | **8/10** |
 | F — Fora de escopo (deve recusar) | 10/10 | 10/10 |
 | **Total** | **59/60** | **53/60** |
 
-Recusas indevidas: 0 contra 1. Latência mediana: 21 s contra 24 s — a
-governança não custou tempo.
+### O agente também erra
 
-**Onde a diferença aparece.** Não é no básico: em consulta direta e em
-ranking os dois vão bem, e é assim que tem que ser. A distância abre nas
-pegadinhas, que é exatamente o que a camada certificada existe para
-resolver. E 5 dos 7 erros do baseline são **o mesmo erro**: a pergunta
-diz "segundo o SCR.data", ele consulta a série oficial do BCB e atribui
-o número ao SCR. O resultado sai plausível, redondo e com fonte errada —
-o tipo de erro que passa despercebido numa reunião.
+Em B09 ele perdeu o filtro de modalidade e respondeu a carteira PJ inteira (R$ 2,92 Tri) no lugar de empréstimos a PJ (R$ 1,11 Tri). Errar o filtro é diferente de errar a fonte — o número fica quase três vezes maior, e alguém percebe —, mas continua sendo errar.
 
-**O agente também erra**, e o erro está publicado: em B09 perdeu o
-filtro de modalidade e respondeu a carteira PJ inteira (R$ 2,92 Tri) no
-lugar de empréstimos a PJ (R$ 1,11 Tri). Errar o filtro é diferente de
-errar a fonte, mas continua sendo errar.
+### O que este número não prova
 
-**O que este número não prova.** Um modelo só, e aberto: não se
-generaliza para modelos de ponta sem nova rodada. As perguntas foram
-escritas por quem construiu a camada, e o viés é mitigado — não
-eliminado — pela verificação independente e pela categoria A, onde o
-baseline deveria ir bem. E há variação entre execuções: nas 84 perguntas
-que as duas rodadas têm em comum, o baseline não divergiu em nenhuma
-(os erros são sistemáticos), mas o agente divergiu em uma. O placar vale
-como diferença de ordem de grandeza, não como número exato.
+Um modelo só, aberto e gratuito: não se generaliza para modelos de ponta sem nova rodada. As perguntas foram escritas por quem construiu a camada, e o viés foi mitigado pela verificação independente e pela categoria A (onde o baseline deveria ir bem, e foi) — mitigado, não eliminado. E há variação entre execuções: nas 84 perguntas que as duas rodadas têm em comum, o baseline não divergiu em nenhuma, mas o agente divergiu em uma. O placar vale como diferença de ordem de grandeza, não como número exato.
 
-Relatório completo, erro a erro, em
-[`evaluation/resultados/rodada2.md`](evaluation/resultados/rodada2.md).
-Critérios, e o registro de **toda** alteração feita depois de fixados —
-inclusive a única feita com a rodada em curso — em
-[`evaluation/METODOLOGIA.md`](evaluation/METODOLOGIA.md).
+---
 
-### Como rodar
+## Três decisões de design que eu defendo
 
-Crie um `.env` na raiz (fora do git) com:
+**1. Toda medida de "período atual" passa por uma única âncora dinâmica.** Nunca `MAX()`, `SAMEPERIODLASTYEAR()` ou data literal. `dim_calendario` é gerada por `dbt_utils.date_spine()` até 2026-12-31, bem além do fim real dos dados (dez/2025), e o relacionamento com `fato_credito` é OneDirection. Sem uma âncora que force `CROSSFILTER(..., BOTH)`, qualquer medida de "competência atual" escaneia o calendário inteiro e erra em silêncio. Essa classe de erro apareceu **quatro vezes** neste projeto ([ADR-010](docs/decision-log/adr-010-correcao-medidas-semiaditivas.md), [011](docs/decision-log/adr-011-correcao-comparativos-ano-anterior.md), [014](docs/decision-log/adr-014-terceira-ocorrencia-data-fixa.md)) até virar regra fixa, verificada medida a medida.
+
+**2. Field parameter trocado por slicer comum, contra a recomendação literal da auditoria** ([ADR-013](docs/decision-log/adr-013-field-parameter-inviavel-conexao-live.md)). Field parameter exige modelo local, e modelo local é uma decisão que já havia sido rejeitada para não duplicar 34,4M de linhas. Prefiro manter a arquitetura Direct Lake com o trade-off documentado a violar uma decisão estrutural anterior por uma diferença semântica de interação.
+
+**3. O painel duplo resolve o desalinhamento desligando o eixo Y, não compensando por pixel.** As duas séries têm rótulos de larguras diferentes ("R$ 8 Tri" contra "4%") e o Power BI calcula a área de plot de cada visual separadamente. Empurrar pixels quebraria a cada mudança de fonte, DPI ou resolução; desligar o eixo de valor resolve de um jeito que não depende de medida nenhuma em pixels.
+
+---
+
+## Como rodar
+
+Crie um `.env` na raiz (fora do git):
 
 ```
 GEMINI_API_KEY=...          # gratuita em https://aistudio.google.com/apikey
 LUMEN_SENHA_DEMO=...        # senha de entrada da demonstração
 ```
 
-As credenciais do Fabric vêm do `~/.dbt/profiles.yml` (o mesmo SPN do
-dbt) ou das variáveis `FABRIC_TENANT_ID`, `FABRIC_CLIENT_ID` e
-`FABRIC_CLIENT_SECRET`.
+As credenciais do Fabric vêm do `~/.dbt/profiles.yml` (o mesmo SPN do dbt) ou das variáveis `FABRIC_TENANT_ID`, `FABRIC_CLIENT_ID` e `FABRIC_CLIENT_SECRET`.
 
 ```bash
-streamlit run agent/app.py                              # interface
-python -m agent.avaliacao --modelo gemma-4-26b-a4b-it   # avaliação (consome cota da API)
-python -m evaluation.verificar_gabarito                 # confere o gabarito pelos dois caminhos
-python -m evaluation.benchmark --rodada minha_rodada    # benchmark (retomável, horas de cota)
+# agente
+streamlit run agent/app.py
+
+# o duelo entre as duas abordagens, lado a lado
+streamlit run evaluation/app_duelo.py
+python -m evaluation.duelo --id D04 --pausa
+
+# avaliação e benchmark (consomem cota da API)
+python -m agent.avaliacao --modelo gemma-4-26b-a4b-it
+python -m evaluation.verificar_gabarito
+python -m evaluation.benchmark --rodada minha_rodada
 python -m evaluation.relatorio evaluation/resultados/minha_rodada.jsonl
 ```
 
-Usa o nível gratuito da API: com cota esgotada, o agente passa para o
-próximo modelo da cadeia de reserva, e a avaliação espera a janela de
-cota virar. O teto que mais atrapalha não é o de requisições por dia, e
-sim o de **tokens de entrada por minuto** — como cada chamada com
-ferramenta reenvia a conversa inteira, uma pergunta sozinha pode
-estourá-lo. Por isso o benchmark espaça as chamadas
-([`agent/ritmo.py`](agent/ritmo.py)), e desconta essa espera da latência
-medida. O custo do projeto está em [`docs/finops.md`](docs/finops.md).
+### Sobre a cota gratuita
 
-## Decisões técnicas (ADRs)
+O teto que mais atrapalha não é o de requisições por dia, e sim o de **tokens de entrada por minuto**: como cada chamada com ferramenta reenvia a conversa inteira, uma única pergunta pode estourá-lo quando alguma consulta devolve muito texto. Por isso o benchmark espaça as chamadas ([`agent/ritmo.py`](agent/ritmo.py)) e desconta essa espera da latência medida. Com a cota esgotada, o agente cai para o próximo modelo da cadeia de reserva.
 
-As decisões de arquitetura são documentadas em `docs/decision-log/`
-conforme acontecem no desenvolvimento real — não como uma lista fixa
-predefinida.
+O custo do projeto está em [`docs/finops.md`](docs/finops.md): **R$ 0 de desembolso**.
 
-- **ADR-001**: Execução local com DuckDB nas Sprints 1-5, com plano
-  explícito de migração para Microsoft Fabric na Sprint 6
-- **ADR-002**: Ingestão do SCR.data via download de ZIP anual (não OData,
-  como originalmente planejado)
-- **ADR-003**: Correção arquitetural — camada Bronze deve ser append-only
-  (identificado em revisão de código por colega sênior)
-- **ADR-004**: Correção arquitetural — camada Silver mantém granularidade
-  total da fonte; agregação fica para a Gold
-- **ADR-005**: Adoção incremental de type hints a partir da Sprint 6
-- **ADR-006**: Manutenção de DOUBLE (não DECIMAL) para colunas monetárias
-- **ADR-007**: Materialização full-refresh na fase local, incremental avaliada na Sprint 6
-- **ADR-008**: Migração para Microsoft Fabric concluída — SPN em vez de CLI, capacity de trial, `dim_calendario` portável
-- **ADR-009**: Modelo semântico Direct Lake publicado sobre a Gold do Fabric
-- **ADR-010**: Correção das medidas certificadas de `SUM()` para
-  `LASTNONBLANKVALUE` — as medidas de saldo são semiaditivas e não podem
-  somar competências no tempo
-- **ADR-011**: Correção dos comparativos ano a ano (`SAMEPERIODLASTYEAR`
-  sem âncora herdava o fim do calendário gerado, não o fim real dos dados)
-  e do separador decimal em medidas de texto
-- **ADR-012**: Investigação parcial de uma divergência entre o modelo
-  publicado no Fabric e o `lumen.duckdb` local para uma competência
-  específica — causa raiz não totalmente confirmada, registrada com
-  honestidade em vez de escondida
-- **ADR-013**: Field parameter da Página 2 ("Cliente") substituído por
-  slicer comum — parâmetros não podem ser criados em fontes de conexão
-  live sem modelo local, o que descaracterizaria a arquitetura Direct Lake
-- **ADR-014**: Terceira ocorrência do padrão de data fixa em vez de âncora
-  dinâmica (medidas do dumbbell da Página 1) — mesma classe de erro do
-  ADR-010/011, agora com literal `DATE(...)` em vez de time intelligence
-  sem âncora
-- **ADR-015**: Arquitetura do agente governado — o LLM escolhe medidas de
-  um catálogo fechado e o DAX é montado por código; conexão do modelo com
-  identidade fixa (entidade de serviço não é aceita com SSO); troca de
-  Claude para Gemini/Gemma pelo custo zero; resultado da avaliação e o
-  ajuste da regra de lastro feito depois de uma falha
-- **ADR-016**: Medidas deflacionadas pelo IPCA criadas **antes** do
-  gabarito, para que a camada certificada não fosse ajustada em resposta
-  a uma pergunta do teste
-- **ADR-017**: RLS fora do escopo da v1.0 — o agente consulta com
-  identidade fixa (consequência do ADR-015), então segurança em nível de
-  linha filtraria pelo serviço e não por quem pergunta; os outros quatro
-  itens da Sprint 7 não estão bloqueados e viram backlog
+---
 
-## Estrutura do projeto
-
-common/ → utilitários compartilhados (logging estruturado)
-ingestion/ → scripts de ingestão (Bronze) local, versão DuckDB
-transform/silver/ → scripts de transformação (Silver) local, versão DuckDB
-transform/dbt/ → projeto dbt (staging + star schema Gold) — roda contra
-  DuckDB local (`--target dev`) ou Fabric (`--target fabric`)
-fabric/notebooks/ → notebooks PySpark (Bronze + Silver) para rodar no
-  Fabric — equivalentes aos scripts de ingestion/ e transform/silver/
-tests/ → testes de qualidade (pytest) e utilitários de CI
-docs/ → dicionário de dados, ADRs, arquitetura
-powerbi/ → catálogo de medidas DAX, tema do relatório e specs Deneb
-  (Vega-Lite) do dashboard (Sprint 8)
-agent/ → agente analítico (Sprint 10): acesso ao modelo, catálogo,
-  consulta governada, ferramentas, interface, avaliação e guardrails
-evaluation/ → benchmark (Sprints 11–12): gabarito das 60 perguntas e sua
-  verificação, baseline text-to-SQL, corretor, runner, metodologia e
-  resultados de cada rodada
-
-## Fontes de dados
-
-- **SGS (Banco Central)**: séries temporais de Selic, IPCA, crédito nacional
-- **SCR.data (Banco Central)**: crédito por UF, modalidade e segmento
-  (~34,4 milhões de linhas, 2015-2025)
-- **IBGE**: localidades e população por UF
-
-Detalhes completos em `docs/data-dictionary.md` e `ingestion/contracts/`.
-
-## Como reproduzir
-
-Instruções completas de setup serão adicionadas ao final da fase de
-engenharia de dados. Resumo atual:
+## Reproduzir do zero
 
 ```bash
 python -m venv .venv && source .venv/Scripts/activate
 pip install -r requirements.txt
 
 python ingestion/ingestir_sgs.py
-python ingestion/ingestir_scr_data.py   # ~2GB de download, leva tempo
+python ingestion/ingestir_scr_data.py   # ~2 GB de download, leva tempo
 python ingestion/ingestir_ibge.py
 
 python transform/silver/silver_sgs.py
 python transform/silver/silver_scr_data.py
 python transform/silver/silver_ibge.py
 
-cd transform/dbt && dbt build
+cd transform/dbt && dbt build           # --target dev (DuckDB) ou --target fabric
 ```
+
+---
+
+## Estrutura
+
+```
+agent/              agente governado: catálogo, consulta, ferramentas, interface, guardrails
+evaluation/         benchmark: gabarito das 60 perguntas, baseline text-to-SQL, corretor, relatórios
+ingestion/          ingestão (Bronze), versão local em DuckDB
+transform/silver/   transformação (Silver), versão local em DuckDB
+transform/dbt/      projeto dbt: staging + star schema Gold, contra DuckDB ou Fabric
+fabric/notebooks/   notebooks PySpark equivalentes, para rodar no Fabric
+powerbi/            catálogo de medidas DAX, tema e specs Deneb do dashboard
+docs/               dicionário de dados, arquitetura, ADRs, finops e material de lançamento
+tests/              testes de qualidade (pytest) e utilitários de CI
+common/             utilitários compartilhados
+```
+
+---
+
+## Fontes de dados
+
+- **SCR.data (Banco Central)** — crédito por UF, modalidade e segmento (~34,4 milhões de linhas, 2015–2025)
+- **SGS (Banco Central)** — séries de Selic, IPCA e crédito nacional
+- **IBGE** — localidades e população por UF
+
+Detalhes em [`docs/data-dictionary.md`](docs/data-dictionary.md) e `ingestion/contracts/`.
+
+---
+
+## Decisões técnicas
+
+As decisões de arquitetura são registradas em [`docs/decision-log/`](docs/decision-log/) conforme acontecem no desenvolvimento real, não como uma lista predefinida. Inclusive as investigações que não fecharam.
+
+| ADR | Decisão |
+|---|---|
+| [001](docs/decision-log/adr-001-execucao-local-duckdb.md) | Execução local com DuckDB nas Sprints 1–5, com plano explícito de migração para o Fabric |
+| [002](docs/decision-log/adr-002-scr-data-download-zip.md) | Ingestão do SCR.data por ZIP anual, não OData como planejado |
+| [003](docs/decision-log/adr-003-bronze-append-only.md) | Correção: Bronze passa a ser append-only (apontado em revisão por colega sênior) |
+| [004](docs/decision-log/adr-004-silver-mantem-granularidade.md) | Correção: Silver mantém a granularidade da fonte; agregação fica na Gold |
+| [005](docs/decision-log/adr-005-type-hints.md) | Adoção incremental de type hints a partir da Sprint 6 |
+| [006](docs/decision-log/adr-006-tipo-numerico-monetario.md) | DOUBLE em vez de DECIMAL para colunas monetárias |
+| [007](docs/decision-log/adr-007-materializacao-incremental.md) | Full-refresh na fase local; incremental avaliado depois |
+| [008](docs/decision-log/adr-008-migracao-fabric-concluida.md) | Migração para o Fabric concluída: SPN em vez de CLI, capacity de trial, calendário portável |
+| [009](docs/decision-log/adr-009-modelo-semantico-direct-lake.md) | Modelo semântico Direct Lake publicado sobre a Gold |
+| [010](docs/decision-log/adr-010-correcao-medidas-semiaditivas.md) | Medidas de saldo são semiaditivas: `LASTNONBLANKVALUE` no lugar de `SUM()` |
+| [011](docs/decision-log/adr-011-correcao-comparativos-ano-anterior.md) | Comparativos ano a ano sem âncora herdavam o fim do calendário gerado |
+| [012](docs/decision-log/adr-012-investigacao-parcial-divergencia-p7.md) | Divergência entre o modelo publicado e o DuckDB local — **causa raiz não confirmada**, registrada assim mesmo |
+| [013](docs/decision-log/adr-013-field-parameter-inviavel-conexao-live.md) | Field parameter inviável em conexão live sem modelo local |
+| [014](docs/decision-log/adr-014-terceira-ocorrencia-data-fixa.md) | Terceira ocorrência do padrão de data fixa em vez de âncora dinâmica |
+| [015](docs/decision-log/adr-015-arquitetura-agente-governado.md) | Arquitetura do agente governado, e por que a conexão usa identidade fixa sem SSO |
+| [016](docs/decision-log/adr-016-medidas-deflacionadas-antes-do-gabarito.md) | Medidas deflacionadas pelo IPCA criadas **antes** do gabarito, para a camada não ser ajustada em resposta ao teste |
+| [017](docs/decision-log/adr-017-rls-fora-do-escopo-da-v1.md) | RLS fora do escopo da v1.0: o agente consulta com identidade fixa, então RLS filtraria pelo serviço e não por quem pergunta |
+
+---
+
+## Estado do projeto
+
+**v1.0**, com 9 das 12 sprints do plano entregues.
+
+| Sprint | Entrega | |
+|---|---|---|
+| 1–5 | Fundação, Bronze, Silver, Gold (star schema em dbt) | ✅ |
+| 6 | Modelo semântico Direct Lake + medidas certificadas | ✅ |
+| 7 | AI-readiness: sinônimos, BPA na CI, RLS | ⛔ RLS descartado com razão registrada ([ADR-017](docs/decision-log/adr-017-rls-fora-do-escopo-da-v1.md)); os outros itens viram backlog |
+| 8 | Dashboard Power BI | ✅ |
+| 9 | ML explicável: previsão de inadimplência e anomalias | ⬜ não iniciada |
+| 10 | Agente analítico governado | ✅ |
+| 11 | Gabarito de 60 perguntas + baseline text-to-SQL | ✅ |
+| 12 | Benchmark e lançamento | ✅ |
+
+**Fora de escopo por decisão, não por esquecimento:** faixa sombreada da defasagem SCR/SGS na página de contexto macro e layout mobile da primeira página.
+
+**Sobre a numeração:** ADRs e commits anteriores a setembro de 2026 chamam o dashboard de "Sprint 7" e o agente de "Sprint 8". A numeração acima é a do plano original.
+
+**Material de lançamento:** [memorando executivo](docs/memorando-executivo.md) · [artigo](docs/artigo.md) · [roteiro de demonstração](docs/roteiro-demo.md) · [finops](docs/finops.md)
